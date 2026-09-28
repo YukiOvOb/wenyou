@@ -2497,7 +2497,8 @@ async function startOpening(save) {
 }
 async function regenOpening() {
   const save = G.save; if (!save || G.busy) return;
-  const snap = (save.snapshots || []).find(x => x.turn === 0);
+  // 旧版本留下的空开场没有快照，但它也没有改动过任何状态，可以直接用当前状态
+  const snap = (save.snapshots || []).find(x => x.turn === 0) || (save.log.length === 1 && !str(save.log[0].narrative) ? { turn: 0, state: clone(save.state), logLen: 0 } : null);
   if (!snap) { toast('找不到开场前的状态，无法重新生成'); return; }
   const keep = {}; for (const k of PLAY_KEYS) keep[k] = save.state[k];
   save.state = Object.assign(clone(snap.state), keep);
@@ -3063,6 +3064,7 @@ function renderLog() {
       } }, '↺ 重选') : null));
     if (e.action) el.append(h('div', { class: 'act' }, h('span', {}, e.action)));
     el.append(h('div', { class: 'narr', html: narrHTML(e.narrative) }));
+    if (!str(e.narrative)) el.append(h('div', { class: 'warn-line' }, '这一段没有正文。'));
     if (e.chips?.length) el.append(h('div', { class: 'chips' }, ...e.chips.map(c => h('span', { class: 'chip' + (c.c ? ' c-' + c.c : '') }, c.t))));
     for (const w of e.warns || []) el.append(h('div', { class: 'warn-line' }, w));
     if (e.raw && e.warns?.length) el.append(rawViewer(e.raw));
@@ -3072,7 +3074,7 @@ function renderLog() {
           h('button', { onclick: () => playTurn(c) }, c),
           h('button', { class: 'edit', 'aria-label': '修改后再发送', title: '修改后再发送', onclick: () => { const a = $('#action'); a.value = c; autoGrow(); a.focus(); } }, '✎')))));
       }
-      if (e.turn === 0 && !sv.script.opening && snapTurns.has(0)) el.append(h('div', { class: 'tools' },
+      if (e.turn === 0 && !sv.script.opening && (snapTurns.has(0) || !str(e.narrative))) el.append(h('div', { class: 'tools' },
         h('button', { class: 'btn sm ghost', onclick: async () => { if (await ask('重新生成开场', '当前的开场会被换掉，AI 会按同样的开局设定重新写一个。', '重新生成')) regenOpening(); } }, '重新生成开场')));
       if (e.turn > 0) el.append(h('div', { class: 'tools' },
         h('button', { class: 'btn sm ghost', onclick: () => reroll() }, '重新生成'),
@@ -3524,7 +3526,7 @@ $('#btn-open-settings').onclick = () => { renderSettings(); showView('settings')
 })();
 
 // 供测试使用
-window.__wenyou = { G, S: () => S, buildSystemPrompt, buildUserPrompt, splitOutput, applyDelta, parseLooseJSON, normalizeScript };
+window.__wenyou = { G, S: () => S, buildSystemPrompt, buildUserPrompt, splitOutput, applyDelta, parseLooseJSON, normalizeScript, persist };
 </script>
 </body>
 </html>

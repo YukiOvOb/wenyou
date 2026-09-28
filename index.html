@@ -215,6 +215,7 @@ details.fold summary{cursor:pointer;color:var(--muted);font-size:13.5px}
 .roll-item .desc.extra{white-space:pre-wrap;font-size:12.5px;color:var(--faint);margin-top:4px}
 .roll-item .desc.extra:empty{display:none}
 .update-card{border-color:var(--accent);margin-bottom:16px}
+.char .basic{font-size:12.5px;color:var(--muted);margin:2px 0 4px;line-height:1.5}
 #update-bar{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:70;display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--accent);border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.15);font-size:14px;line-height:1.5}
 #update-bar span{flex:1}
 .unmet{margin-top:14px}
@@ -310,7 +311,7 @@ details.fold summary{cursor:pointer;color:var(--muted);font-size:13.5px}
    ========================================================= */
 
 const APP_VERSION = 1;
-const BUILD = '2026-09-29.2'; // 网页版本号：每次发布都改一下，打开着的页面会拿它和网站上的最新版比较
+const BUILD = '2026-09-29.3'; // 网页版本号：每次发布都改一下，打开着的页面会拿它和网站上的最新版比较
 const STATE_MARK = '###STATE###';
 
 /* ---------------- 工具 ---------------- */
@@ -676,7 +677,7 @@ const BUILTIN_SCRIPTS = [
 /* 斗罗大陆 · 武魂殿之女（由 build_douluo.py 生成） */
 {
  "id": "douluo-wuhundian",
- "version": 2,
+ "version": 3,
  "builtin": true,
  "title": "斗罗大陆 · 武魂殿之女",
  "author": "同人剧本",
@@ -715,8 +716,10 @@ const BUILTIN_SCRIPTS = [
   {
    "key": "age",
    "label": "年龄",
-   "type": "text",
-   "initial": "十八岁"
+   "type": "number",
+   "initial": 18,
+   "min": 1,
+   "display": "number"
   },
   {
    "key": "origin",
@@ -804,6 +807,32 @@ const BUILTIN_SCRIPTS = [
    "min": 0
   }
  ],
+ "charStats": [
+  {
+   "key": "wuhun",
+   "label": "武魂"
+  },
+  {
+   "key": "level",
+   "label": "魂力等级",
+   "type": "number",
+   "min": 0,
+   "max": 100
+  },
+  {
+   "key": "rings",
+   "label": "魂环"
+  },
+  {
+   "key": "skills",
+   "label": "魂技"
+  }
+ ],
+ "calendar": {
+  "format": "第{n}年",
+  "start": 1
+ },
+ "growth": "魂师的等级随年龄增长：天赋好、资源足的年轻魂师一年能升两三级，普通魂师一年一级左右，三十岁以后越来越慢，七十级以上每升一级都要好几年，封号斗罗很少再提升。每到十的整数级（10、20、30……）要吸收一个新魂环才能继续突破，每个魂环带来一个新魂技，魂环的年限和等级相称。魂师比普通人长寿，封号斗罗能活到一百多岁；没有魂力的普通人活到六七十岁。原著人物的成长以原著为准。",
  "persona": "",
  "creation": {
   "pronoun": "她",
@@ -867,7 +896,15 @@ const BUILTIN_SCRIPTS = [
         "backstory": "你父亲早年进山砍柴，被魂兽咬死了，她一个人把你养大。",
         "secret": "她有点怕武魂殿。当年分殿划定魂兽猎区，村里有人因此丢了进山的活计。这件事她没跟你说过。",
         "met": true,
-        "address": "你叫她“娘”"
+        "address": "你叫她“娘”",
+        "gender": "女",
+        "age": 43,
+        "stats": {
+         "wuhun": "蓝银草（没有先天魂力）",
+         "level": 0,
+         "rings": "无",
+         "skills": "无"
+        }
        }
       ]
      },
@@ -897,7 +934,15 @@ const BUILTIN_SCRIPTS = [
         "backstory": "年轻时想当魂师，但没有魂力，就把希望都放在你身上。",
         "secret": "铺子这几年一直亏钱，他瞒着你借了高利贷。",
         "met": true,
-        "address": "你叫他“爹”"
+        "address": "你叫他“爹”",
+        "gender": "男",
+        "age": 47,
+        "stats": {
+         "wuhun": "绣花针（器武魂，没有先天魂力）",
+         "level": 0,
+         "rings": "无",
+         "skills": "无"
+        }
        }
       ]
      },
@@ -927,7 +972,15 @@ const BUILTIN_SCRIPTS = [
         "backstory": "他见过穷孩子靠每月一枚金魂币的补助改变命运，也见过上级为了政绩虚报人数。",
         "secret": "他曾按上级的意思压下过一桩魂师失踪案，一直心里不安。",
         "met": true,
-        "address": "你叫他“爹”；外人叫他“执事大人”"
+        "address": "你叫他“爹”；外人叫他“执事大人”",
+        "gender": "男",
+        "age": 49,
+        "stats": {
+         "wuhun": "铁尺（器武魂，辅助）",
+         "level": 36,
+         "rings": "三环：黄 · 黄 · 紫",
+         "skills": "第一魂技【格挡】：铁尺格开攻击；第二魂技【定身】：短暂定住一个人；第三魂技【丈量】：看出对方的魂力高低。"
+        }
        }
       ]
      },
@@ -957,7 +1010,15 @@ const BUILTIN_SCRIPTS = [
         "backstory": "你母亲殉职的那次任务，他也在场。",
         "secret": "那次任务的情报有问题，他怀疑是殿里有人故意的，但没有证据。",
         "met": true,
-        "address": "你叫他“卫叔”"
+        "address": "你叫他“卫叔”",
+        "gender": "男",
+        "age": 46,
+        "stats": {
+         "wuhun": "铁脊狼（兽武魂，强攻）",
+         "level": 58,
+         "rings": "五环：黄 · 黄 · 紫 · 紫 · 黑",
+         "skills": "五个魂技，以撕咬、冲撞和狼嚎为主，擅长清剿邪魂师。"
+        }
        }
       ]
      },
@@ -987,7 +1048,15 @@ const BUILTIN_SCRIPTS = [
         "backstory": "出身贫寒，靠在教皇殿和长老殿之间周旋才走到今天。",
         "secret": "他暗中站在教皇比比东一边，替她在各地分殿安插人手。这件事如果被供奉殿知道，后果很严重。",
         "met": true,
-        "address": "你叫他“父亲”；外人叫他“主教大人”"
+        "address": "你叫他“父亲”；外人叫他“主教大人”",
+        "gender": "男",
+        "age": 53,
+        "stats": {
+         "wuhun": "金羽鹰（兽武魂，敏攻）",
+         "level": 72,
+         "rings": "七环",
+         "skills": "七个魂技，以高空突袭见长。"
+        }
        }
       ]
      },
@@ -1017,7 +1086,15 @@ const BUILTIN_SCRIPTS = [
         "backstory": "她看着比比东从前任教皇的弟子一步步当上教皇，知道当年的一部分内情。",
         "secret": "她知道前任教皇千寻疾对比比东做过什么。这让她在比比东面前既有分量，也有危险。",
         "met": true,
-        "address": "你叫她“祖母”；殿里的人叫她“霜衔长老”或“霜衔斗罗”"
+        "address": "你叫她“祖母”；殿里的人叫她“霜衔长老”或“霜衔斗罗”",
+        "gender": "女",
+        "age": 86,
+        "stats": {
+         "wuhun": "霜凝剑（器武魂，强攻，冰属性）",
+         "level": 92,
+         "rings": "九环（封号斗罗）",
+         "skills": "霜凝剑气、冰封领域，能开启武魂真身。"
+        }
        }
       ]
      },
@@ -1047,7 +1124,15 @@ const BUILTIN_SCRIPTS = [
         "backstory": "她自己也是武魂殿收养的孤儿。",
         "secret": "孤儿院的经费这两年一直被层层克扣，她自己贴了不少钱进去。",
         "met": true,
-        "address": "你叫她“温嬷嬷”"
+        "address": "你叫她“温嬷嬷”",
+        "gender": "女",
+        "age": 62,
+        "stats": {
+         "wuhun": "木兰（植物武魂，没有先天魂力）",
+         "level": 0,
+         "rings": "无",
+         "skills": "无"
+        }
        }
       ]
      }
@@ -1065,9 +1150,9 @@ const BUILTIN_SCRIPTS = [
       "desc": "{name}以见习魂师的身份被派到索托城分殿，协助处理魂师登记和斗魂场的事务。这时唐三和小舞刚到索托城，准备报考史莱克学院。",
       "stats": {
        "identity": "武魂殿索托城分殿见习魂师",
-       "age": "十八岁"
+       "age": 18
       },
-      "stage": "第一年 · 初秋 · 索托城",
+      "stage": "初秋 · 索托城",
       "objectives": [
        {
         "title": "完成见习",
@@ -1090,7 +1175,15 @@ const BUILTIN_SCRIPTS = [
         "backstory": "年轻时想进教皇殿，没能如愿，在地方分殿待了二十年。",
         "secret": "他和索托城大斗魂场的老板私下有往来，斗魂场的赔率有时不干净。",
         "met": true,
-        "address": "“卢主教”或“主教大人”"
+        "address": "“卢主教”或“主教大人”",
+        "gender": "男",
+        "age": 55,
+        "stats": {
+         "wuhun": "玄甲龟（兽武魂，防御）",
+         "level": 73,
+         "rings": "七环",
+         "skills": "七个魂技，以防御和守城见长。"
+        }
        }
       ],
       "opening": "主角在索托城分殿见习，每天在分殿的登记处、城里的街巷、大斗魂场和自己的住处之间来往。"
@@ -1102,9 +1195,9 @@ const BUILTIN_SCRIPTS = [
       "desc": "{name}在武魂城的武魂殿学院读书，和“黄金一代”胡列娜、邪月、焱是同届。学院开始为将来的全大陆高级魂师学院精英大赛挑选人选。",
       "stats": {
        "identity": "武魂殿学院高年级学员",
-       "age": "十九岁"
+       "age": 19
       },
-      "stage": "第一年 · 初秋 · 武魂城",
+      "stage": "初秋 · 武魂城",
       "overrides": {
        "胡列娜": {
         "met": true,
@@ -1140,9 +1233,9 @@ const BUILTIN_SCRIPTS = [
       "desc": "{name}被调到天斗城分殿，在白金主教萨拉斯手下做文书和联络，经常替分殿往来天斗皇宫和太子雪清河的府邸。她不知道，太子雪清河其实是武魂殿的少主千仞雪。",
       "stats": {
        "identity": "武魂殿天斗城分殿文书魂师",
-       "age": "二十岁"
+       "age": 20
       },
-      "stage": "第一年 · 初秋 · 天斗城",
+      "stage": "初秋 · 天斗城",
       "overrides": {
        "萨拉斯": {
         "met": true,
@@ -1160,7 +1253,7 @@ const BUILTIN_SCRIPTS = [
       "opening": "主角在天斗城分殿做文书，每天在分殿、天斗城的街市、皇宫和太子府之间跑腿，住在分殿附近租的一间小屋里。"
      }
     ],
-    "aiHint": "起点是原著故事开始时（唐三和小舞刚到索托城）主角所在的地方和身份：可以是索托城、武魂城、天斗城，也可以是诺丁城、某个行省的分殿、星罗城、边境要塞等，但要能在不久之后和原著人物产生交集。stats 给出 identity（身份）、age（十八到二十岁）；给出 stage；opening 写主角平时在哪些地方活动、过着什么样的日子；overrides 写主角开局时已经认识的原著人物（通常 0～2 人）；可以附带 1 个原创人物（上司、同僚、室友……）和 1 个开局目标。"
+    "aiHint": "起点是原著故事开始时（唐三和小舞刚到索托城）主角所在的地方和身份：可以是索托城、武魂城、天斗城，也可以是诺丁城、某个行省的分殿、星罗城、边境要塞等，但要能在不久之后和原著人物产生交集。stats 给出 identity（身份）、age（18～20 的数字）；给出 stage（季节 · 地点）；opening 写主角平时在哪些地方活动、过着什么样的日子；overrides 写主角开局时已经认识的原著人物（通常 0～2 人）；可以附带 1 个原创人物（上司、同僚、室友……）和 1 个开局目标。"
    },
    {
     "key": "wuhun",
@@ -1433,7 +1526,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "小时候父母双亡，和哥哥邪月被武魂殿收养。因为天赋好，被比比东收为嫡传弟子，她把老师当成母亲。",
    "secret": "她讨厌别人只把她当成会媚术的美人。焱一直喜欢她，她知道，但没法回应。她隐约感觉到老师心里有她不了解的阴暗面。",
    "met": false,
-   "address": "同辈直呼“胡列娜”，熟了叫“列娜”；武魂殿的下属和普通魂师称“圣女”或“圣女殿下”；比比东叫她“娜娜”。"
+   "address": "同辈直呼“胡列娜”，熟了叫“列娜”；武魂殿的下属和普通魂师称“圣女”或“圣女殿下”；比比东叫她“娜娜”。",
+   "gender": "女",
+   "age": 20,
+   "stats": {
+    "wuhun": "妖狐（兽武魂，控制 / 精神）",
+    "level": 37,
+    "rings": "三环：黄（五百年）· 紫（千年）· 紫（千年）",
+    "skills": "第一魂技【魅惑】：对视时让对手短暂失神；第二魂技【妖狐幻影】：分出幻影迷惑对手；第三魂技【狐火】：放出狐火灼烧对手的精神。和邪月有武魂融合技【妖月】。"
+   }
   },
   {
    "name": "邪月",
@@ -1450,7 +1551,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "和胡列娜相依为命长大，从小替妹妹挡事。",
    "secret": "他清楚妹妹很依赖教皇，担心这份依赖有一天会害了她。",
    "met": false,
-   "address": "同辈直呼“邪月”"
+   "address": "同辈直呼“邪月”",
+   "gender": "男",
+   "age": 21,
+   "stats": {
+    "wuhun": "月刃（器武魂，强攻 / 敏攻）",
+    "level": 38,
+    "rings": "三环：黄（六百年）· 紫（千年）· 紫（千年）",
+    "skills": "第一魂技【月刃回旋】：掷出月刃回旋斩击；第二魂技【圆月斩】：蓄力斩出一道圆弧刀光；第三魂技【月影】：留下残影扰乱对手。和胡列娜有武魂融合技【妖月】。"
+   }
   },
   {
    "name": "焱",
@@ -1467,7 +1576,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "出身武魂殿的普通魂师家庭，靠天赋和苦练进了黄金一代。",
    "secret": "他喜欢胡列娜，大家都知道，被拒绝了很多次还不放弃。他其实很怕在她面前输。",
    "met": false,
-   "address": "同辈直呼“焱”"
+   "address": "同辈直呼“焱”",
+   "gender": "男",
+   "age": 20,
+   "stats": {
+    "wuhun": "火焰领主（元素类武魂，强攻，火属性）",
+    "level": 37,
+    "rings": "三环：黄（五百年）· 紫（千年）· 紫（千年）",
+    "skills": "第一魂技【烈焰拳】：拳头裹着火焰重击；第二魂技【火焰领域】：周身形成高温领域，削弱对手；第三魂技【爆炎】：引爆一片火焰。"
+   }
   },
   {
    "name": "比比东",
@@ -1484,7 +1601,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "年轻时是前任教皇千寻疾的弟子，和玉小刚相恋。千寻疾强暴了她，用玉小刚的性命威胁她，又用幻术拆散了两人。她因此生下女儿千仞雪。千寻疾死后，她继任教皇。",
    "secret": "她非常恨千家，对亲生女儿千仞雪极其冷淡。她的两个武魂是死亡蛛皇和噬魂蛛皇，她还继承了罗刹神的传承。胡列娜是她唯一真心疼爱的人。",
    "met": false,
-   "address": "武魂殿的人称“教皇冕下”或“冕下”；胡列娜称“老师”。"
+   "address": "武魂殿的人称“教皇冕下”或“冕下”；胡列娜称“老师”。",
+   "gender": "女",
+   "age": 50,
+   "stats": {
+    "wuhun": "死亡蛛皇（兽武魂，控制 / 剧毒）",
+    "level": 96,
+    "rings": "九环（封号斗罗）",
+    "skills": "蛛网束缚、剧毒、吞噬对手的魂力，能开启武魂真身。"
+   }
   },
   {
    "name": "千仞雪",
@@ -1501,7 +1626,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "大供奉千道流的孙女，教皇比比东和前任教皇千寻疾的女儿。从小被母亲冷落，由祖父带大。奉命潜入天斗皇室，顶替了真正的太子雪清河，已经扮了很多年。",
    "secret": "她的武魂是天使，将来要接受天使神的传承。她不知道母亲为什么恨她。扮男人扮得太久，她几乎忘了自己原来的样子。",
    "met": false,
-   "address": "以太子身份出现时，大家称“太子殿下”；真实身份暴露后，武魂殿的人称“少主”或“殿下”。"
+   "address": "以太子身份出现时，大家称“太子殿下”；真实身份暴露后，武魂殿的人称“少主”或“殿下”。",
+   "gender": "女",
+   "age": 26,
+   "stats": {
+    "wuhun": "六翼天使（强攻，神圣属性；以雪清河的身份从不显露）",
+    "level": 70,
+    "rings": "七环（从不示人）",
+    "skills": "天使圣剑、天使之光；扮成雪清河时几乎从不出手。"
+   }
   },
   {
    "name": "千道流",
@@ -1518,7 +1651,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "前任教皇千寻疾的父亲。儿子死后，他和比比东互相提防。",
    "secret": "他为千仞雪的天使神考守护了很多年，知道比比东恨千家。",
    "met": false,
-   "address": "“大供奉”或“大供奉大人”"
+   "address": "“大供奉”或“大供奉大人”",
+   "gender": "男",
+   "age": 120,
+   "stats": {
+    "wuhun": "六翼天使（强攻，神圣属性）",
+    "level": 99,
+    "rings": "九环（极限斗罗）",
+    "skills": "天使圣剑、天使领域，能开启武魂真身。"
+   }
   },
   {
    "name": "萨拉斯",
@@ -1535,7 +1676,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "在天斗经营多年，和皇室、各大贵族都有来往。",
    "secret": "他知道太子雪清河的真实身份，是千仞雪在天斗的暗线之一。",
    "met": false,
-   "address": "“萨拉斯主教”或“主教大人”"
+   "address": "“萨拉斯主教”或“主教大人”",
+   "gender": "男",
+   "age": 52,
+   "stats": {
+    "wuhun": "金纹狮（兽武魂，强攻）",
+    "level": 83,
+    "rings": "八环",
+    "skills": "八个魂技，以正面强攻见长。"
+   }
   },
   {
    "name": "月关",
@@ -1552,7 +1701,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "在长老殿效力多年，是教皇最信任的人之一。",
    "secret": "他和鬼魅的武魂融合技是教皇手里最厉害的底牌之一。",
    "met": false,
-   "address": "“菊长老”或“月关长老”，尊称“菊斗罗”"
+   "address": "“菊长老”或“月关长老”，尊称“菊斗罗”",
+   "gender": "男",
+   "age": 68,
+   "stats": {
+    "wuhun": "奇茸通天菊（植物武魂，控制 / 辅助）",
+    "level": 95,
+    "rings": "九环（封号斗罗）",
+    "skills": "菊瓣化刃、用花香迷惑对手；和鬼魅有武魂融合技。"
+   }
   },
   {
    "name": "鬼魅",
@@ -1569,7 +1726,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "和月关搭档多年。",
    "secret": "教皇交代的脏活，很多是他去办的。",
    "met": false,
-   "address": "“鬼长老”，尊称“鬼斗罗”"
+   "address": "“鬼长老”，尊称“鬼斗罗”",
+   "gender": "男",
+   "age": 70,
+   "stats": {
+    "wuhun": "鬼魅（兽武魂，敏攻，暗属性）",
+    "level": 95,
+    "rings": "九环（封号斗罗）",
+    "skills": "身法诡异，擅长隐匿和暗杀；和月关有武魂融合技。"
+   }
   },
   {
    "name": "唐三",
@@ -1586,7 +1751,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "前世是唐门外门弟子，偷学内门绝学后被逼跳崖，转生到了斗罗大陆。父亲唐昊是隐居的昊天斗罗。",
    "secret": "他是双生武魂，另一个武魂昊天锤一直藏着。他保留着前世的记忆。因为父亲的缘故，他对武魂殿很有戒心。",
    "met": false,
-   "address": "同学、朋友直呼“唐三”；小舞叫他“哥”"
+   "address": "同学、朋友直呼“唐三”；小舞叫他“哥”",
+   "gender": "男",
+   "age": 18,
+   "stats": {
+    "wuhun": "蓝银草（植物武魂，控制）",
+    "level": 29,
+    "rings": "二环：黄（曼陀罗蛇，四百年）· 紫（鬼藤，千年）",
+    "skills": "第一魂技【缠绕】：蓝银草缠住对手，带麻痹毒素；第二魂技【寄生】：蓝银草寄生在对手身上，持续吸取魂力。"
+   }
   },
   {
    "name": "小舞",
@@ -1603,7 +1776,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "在星斗大森林长大，化形前最好的朋友是天青牛蟒大明和泰坦巨猿二明。化形成人后，修为从头开始。",
    "secret": "她是十万年魂兽柔骨兔化形。一旦被识破，魂师会把她当成最珍贵的魂环来猎杀，武魂殿尤其危险。",
    "met": false,
-   "address": "朋友直呼“小舞”"
+   "address": "朋友直呼“小舞”",
+   "gender": "女",
+   "age": 18,
+   "stats": {
+    "wuhun": "柔骨兔（兽武魂，敏攻）",
+    "level": 28,
+    "rings": "二环：黄 · 黄",
+    "skills": "第一魂技【腰弓】：腰身发力弹起，用腿猛击；第二魂技【魅惑】：对视时短暂迷惑对手。"
+   }
   },
   {
    "name": "宁荣荣",
@@ -1620,7 +1801,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "从小有剑斗罗、骨斗罗两位封号斗罗保护，想要什么都有，只是没人把她当成真正的战士。",
    "secret": "她离家来史莱克，一半是赌气，一半是想摆脱宗门给她安排好的路。她隐约知道，自己在宗门和各方势力的往来里是一枚筹码。",
    "met": false,
-   "address": "朋友叫“荣荣”；外人称“宁小姐”"
+   "address": "朋友叫“荣荣”；外人称“宁小姐”",
+   "gender": "女",
+   "age": 18,
+   "stats": {
+    "wuhun": "七宝琉璃塔（器武魂，辅助）",
+    "level": 26,
+    "rings": "二环：黄 · 黄",
+    "skills": "第一魂技【力之宝】：增幅队友的力量；第二魂技【速之宝】：增幅队友的速度。"
+   }
   },
   {
    "name": "朱竹清",
@@ -1637,7 +1826,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "星罗帝国的皇子之间要以生死决出继承人，朱家的女儿从小许配给皇子，胜负生死与共。她的未婚夫是三皇子戴沐白，姐姐朱竹云许配给了大皇子戴维斯。",
    "secret": "她从星罗追到天斗找逃走的戴沐白，却亲眼看到他和一对双胞胎姐妹厮混。她很清楚，这门婚约关系到她的性命，跟感情无关。",
    "met": false,
-   "address": "朋友叫“竹清”或直呼“朱竹清”"
+   "address": "朋友叫“竹清”或直呼“朱竹清”",
+   "gender": "女",
+   "age": 18,
+   "stats": {
+    "wuhun": "幽冥灵猫（兽武魂，敏攻）",
+    "level": 27,
+    "rings": "二环：黄 · 黄",
+    "skills": "第一魂技【幽冥突刺】：高速突进刺击；第二魂技【幽冥百爪】：连续爪击。"
+   }
   },
   {
    "name": "戴沐白",
@@ -1654,7 +1851,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "被哥哥压制，从星罗逃到天斗，在索托城过得很放纵。",
    "secret": "他很清楚和朱竹清的婚约意味着什么，但一直在逃避。",
    "met": false,
-   "address": "同伴叫“戴老大”或直呼“戴沐白”"
+   "address": "同伴叫“戴老大”或直呼“戴沐白”",
+   "gender": "男",
+   "age": 23,
+   "stats": {
+    "wuhun": "邪眸白虎（兽武魂，强攻）",
+    "level": 37,
+    "rings": "三环：黄 · 黄 · 紫",
+    "skills": "第一魂技【白虎护身障】：身前形成护盾；第二魂技【白虎烈光波】：张口喷出光波；第三魂技【白虎金刚变】：全身变得坚硬，力量和防御大增。"
+   }
   },
   {
    "name": "奥斯卡",
@@ -1671,7 +1876,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "在团队里经常被开玩笑。",
    "secret": "他喜欢宁荣荣，但觉得自己配不上她。",
    "met": false,
-   "address": "同伴叫“小奥”或直呼“奥斯卡”"
+   "address": "同伴叫“小奥”或直呼“奥斯卡”",
+   "gender": "男",
+   "age": 22,
+   "stats": {
+    "wuhun": "香肠（器武魂，食物系）",
+    "level": 27,
+    "rings": "二环：黄 · 黄",
+    "skills": "第一魂技【恢复大香肠】：吃下后恢复体力和伤势；第二魂技【解毒小香肠】：解除一般的毒。"
+   }
   },
   {
    "name": "马红俊",
@@ -1688,7 +1901,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "变异武魂带来的邪火一直折磨着他。",
    "secret": "邪火让他很自卑，嘴上越没正形，心里越怕被人看不起。",
    "met": false,
-   "address": "同伴叫“胖子”或直呼“马红俊”"
+   "address": "同伴叫“胖子”或直呼“马红俊”",
+   "gender": "男",
+   "age": 19,
+   "stats": {
+    "wuhun": "邪火凤凰（兽武魂，强攻，火属性）",
+    "level": 27,
+    "rings": "二环：黄 · 黄",
+    "skills": "第一魂技【凤凰火线】：喷出一道凤凰火线；第二魂技【浴火凤凰】：全身燃起凤凰火，攻防大增。"
+   }
   },
   {
    "name": "玉小刚",
@@ -1705,7 +1926,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "出身上三宗之一的蓝电霸王龙家族，因为武魂变异，被家族视为耻辱。",
    "secret": "他和教皇比比东年轻时是恋人，被前任教皇千寻疾的阴谋拆散。他和远房表妹柳二龙之间也有没了结的感情。",
    "met": false,
-   "address": "学生和旁人称“大师”"
+   "address": "学生和旁人称“大师”",
+   "gender": "男",
+   "age": 50,
+   "stats": {
+    "wuhun": "罗三炮（兽武魂，变异）",
+    "level": 29,
+    "rings": "二环：白 · 黄",
+    "skills": "两个魂技都很平庸，他几乎不出手。"
+   }
   },
   {
    "name": "唐昊",
@@ -1722,7 +1951,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "昊天宗的继承人，为了和十万年魂兽化形的阿银在一起，和宗门决裂。武魂殿追杀阿银，阿银为了救他献祭了自己。他因此和武魂殿结下血仇，曾在武魂殿一战中重创前任教皇千寻疾。",
    "secret": "他对武魂殿的恨从来没有消失过。阿银留下的东西，他一直替唐三保管着。",
    "met": false,
-   "address": "村里人叫他“唐铁匠”"
+   "address": "村里人叫他“唐铁匠”",
+   "gender": "男",
+   "age": 46,
+   "stats": {
+    "wuhun": "昊天锤（器武魂，强攻）",
+    "level": 95,
+    "rings": "九环（封号斗罗，从不示人）",
+    "skills": "乱披风锤法、大须弥锤，能开启武魂真身。"
+   }
   },
   {
    "name": "独孤雁",
@@ -1739,7 +1976,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "从小跟着爷爷在毒里泡大。",
    "secret": "她体内的毒越积越多，发作时非常痛苦。",
    "met": false,
-   "address": "同辈直呼“独孤雁”"
+   "address": "同辈直呼“独孤雁”",
+   "gender": "女",
+   "age": 22,
+   "stats": {
+    "wuhun": "碧磷蛇（兽武魂，控制 / 毒）",
+    "level": 36,
+    "rings": "三环：黄 · 紫 · 紫",
+    "skills": "第一魂技【碧磷紫毒】：喷出带毒的紫雾；第二魂技【碧磷蛇缠】：蛇身缠绕对手；第三魂技【碧磷毒针】：射出毒针。"
+   }
   },
   {
    "name": "叶泠泠",
@@ -1756,7 +2001,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "九心海棠一脉单传，她从小被严密保护。",
    "secret": "她很少能自己做决定，所以很羡慕能自由选择的人。",
    "met": false,
-   "address": "同辈直呼“叶泠泠”"
+   "address": "同辈直呼“叶泠泠”",
+   "gender": "女",
+   "age": 21,
+   "stats": {
+    "wuhun": "九心海棠（植物武魂，治疗）",
+    "level": 34,
+    "rings": "三环：黄 · 黄 · 紫",
+    "skills": "第一魂技【海棠愈】：治疗一名队友；第二魂技【海棠护】：给队友加一层护佑；第三魂技【九心回春】：大范围治疗。"
+   }
   },
   {
    "name": "水冰儿",
@@ -1773,7 +2026,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "妹妹水月儿也在天水学院。",
    "secret": "她不愿意承认自己输给任何人，尤其是男人。",
    "met": false,
-   "address": "同辈直呼“水冰儿”"
+   "address": "同辈直呼“水冰儿”",
+   "gender": "女",
+   "age": 22,
+   "stats": {
+    "wuhun": "冰凤凰（兽武魂，强攻 / 控制，冰属性）",
+    "level": 36,
+    "rings": "三环：黄 · 紫 · 紫",
+    "skills": "第一魂技【冰凤羽】：射出冰羽；第二魂技【冰封】：冻住对手的手脚；第三魂技【凤鸣寒啸】：寒气冲击一片区域。"
+   }
   },
   {
    "name": "火舞",
@@ -1790,7 +2051,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "有一个双胞胎哥哥火无双，两人从小比到大。",
    "secret": "她讨厌被当成谁的奖品。",
    "met": false,
-   "address": "同辈直呼“火舞”"
+   "address": "同辈直呼“火舞”",
+   "gender": "女",
+   "age": 20,
+   "stats": {
+    "wuhun": "火焰（元素类武魂，强攻，火属性）",
+    "level": 34,
+    "rings": "三环：黄 · 黄 · 紫",
+    "skills": "第一魂技【火焰旋涡】：卷起火焰旋涡；第二魂技【火舞】：身随火动，连续攻击；第三魂技【烈焰冲击】：一道火焰冲击。"
+   }
   },
   {
    "name": "独孤博",
@@ -1807,7 +2076,15 @@ const BUILTIN_SCRIPTS = [
    "backstory": "独来独往，在落日森林深处有一处秘地。",
    "secret": "他和孙女都深受自身剧毒反噬之苦，他最怕孙女死在他前面。",
    "met": false,
-   "address": "晚辈称“独孤前辈”，尊称“毒斗罗”"
+   "address": "晚辈称“独孤前辈”，尊称“毒斗罗”",
+   "gender": "男",
+   "age": 70,
+   "stats": {
+    "wuhun": "碧磷蛇皇（兽武魂，控制 / 毒）",
+    "level": 91,
+    "rings": "九环（封号斗罗）",
+    "skills": "碧磷蛇皇之毒、毒雾领域，能开启武魂真身。"
+   }
   }
  ],
  "objectives": [],
@@ -1818,7 +2095,7 @@ const BUILTIN_SCRIPTS = [
    "count": 1
   }
  ],
- "stage": "第一年 · 初秋",
+ "stage": "初秋",
  "openingGuide": "开场从一个正在发生的具体场景写起，前三段之内交代主角是谁、在哪里、在做什么，世界观跟着剧情慢慢带出来。",
  "opening": "",
  "openingChoices": []
@@ -1946,6 +2223,10 @@ function normalizeScript(raw) {
   } else delete s.creation;
   s.milestones = Array.isArray(s.milestones) ? s.milestones.filter(m => m && str(m.id) && str(m.title)) : [];
   s.openingSeeds = Array.isArray(s.openingSeeds) ? s.openingSeeds.map(str).filter(Boolean) : [];
+  s.charStats = (Array.isArray(s.charStats) ? s.charStats : []).filter(x => x && str(x.key) && !['name', 'gender', 'age', 'born'].includes(str(x.key)))
+    .map(x => ({ key: str(x.key), label: str(x.label) || str(x.key), type: x.type === 'number' ? 'number' : 'text', ...(x.min !== undefined ? { min: num(x.min) } : {}), ...(x.max !== undefined ? { max: num(x.max) } : {}), ...(str(x.hint) ? { hint: str(x.hint) } : {}) }));
+  s.calendar = normCalendar(s.calendar);
+  s.growth = str(s.growth);
   s.version = Math.max(1, Math.round(num(s.version, 1)));
   delete s.builtin;
   return { ok: errors.length === 0, errors, script: s };
@@ -1957,13 +2238,93 @@ async function listScripts() {
 }
 async function getScript(id) { return (await DB.get('scripts', id)) || BUILTIN_SCRIPTS.find(s => s.id === id) || null; }
 
+/* ---------------- 年龄与纪年 ---------------- */
+/* 把“十九岁”“三百岁”“19”这类写法读成数字；读不出来返回 null */
+function ageNum(v) {
+  if (typeof v === 'number') return Number.isFinite(v) ? Math.round(v) : null;
+  const s = String(v ?? '').trim(); if (!s) return null;
+  const d = s.match(/-?\d+/); if (d) return +d[0];
+  const t = s.match(/[零〇一二两三四五六七八九十百千万]+/); if (!t) return null;
+  const D = { 零: 0, 〇: 0, 一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 }, U = { 十: 10, 百: 100, 千: 1000 };
+  let total = 0, section = 0, digit = 0;
+  for (const ch of t[0]) {
+    if (ch in D) digit = D[ch];
+    else if (ch in U) { section += (digit || 1) * U[ch]; digit = 0; }
+    else { total += (section + digit || 1) * 10000; section = 0; digit = 0; } // 万
+  }
+  return total + section + digit;
+}
+/* 纪年：format 里的 {n} 换成年份，例如“第{n}年”“玄元{n}年”“{n}年” */
+function normCalendar(c) { return { format: str(c?.format).includes('{n}') ? str(c.format) : '第{n}年', start: Number.isFinite(+c?.start) && str(c?.start) !== '' ? Math.round(+c.start) : 1 }; }
+const calendarOf = script => normCalendar(script?.calendar);
+const yearLabel = (script, y) => calendarOf(script).format.replace('{n}', Number.isFinite(+y) ? Math.round(+y) : '?');
+/* 阶段标签开头如果写了年份（例如“第二年 · 初秋 · 武魂城”），读出年份并去掉这一段 */
+function splitStageYear(script, stage) {
+  const f = calendarOf(script).format.replace(/[.*+?^$()|[\]\\]/g, '\\$&').replace('\\{n\\}', '{n}').replace('{n}', '([零〇一二两三四五六七八九十百千万\\d]+)');
+  const m = str(stage).match(new RegExp('^\\s*' + f + '\\s*[·・,，、\\s]*'));
+  return m ? { year: ageNum(m[1]), rest: str(stage).slice(m[0].length) } : { year: null, rest: str(stage) };
+}
+const ageOf = (c, year) => c && c.born !== null && c.born !== undefined && Number.isFinite(+c.born) && Number.isFinite(+year) ? Math.round(year - c.born) : null;
+const isGone = c => /去世|死亡|身死|陨落|坐化|身故|已故/.test(str(c?.status));
+/* 出生年份：写了 born 用 born；写了 age 就从参照年份倒推 */
+function bornFrom(c, refYear) {
+  if (c && c.born !== undefined && c.born !== null && str(c.born) !== '' && Number.isFinite(+c.born)) return Math.round(+c.born);
+  const a = ageNum(c?.age);
+  return a === null || !Number.isFinite(+refYear) ? null : Math.round(refYear) - a;
+}
+/* 只留剧本 charStats 里有的基本信息，数值按范围夹住 */
+function pickCharStats(sc, stats) {
+  const out = {};
+  if (!stats || typeof stats !== 'object') return out;
+  for (const d of sc.charStats || []) {
+    const v = stats[d.key] ?? stats[d.label];
+    if (v === undefined || v === null || str(v) === '') continue;
+    out[d.key] = d.type === 'number' ? clamp(num(v, 0), d.min, d.max) : str(v);
+  }
+  return out;
+}
+/* 把新的基本信息并进人物卡；原来有值、现在变了的，记一个标签 */
+function mergeCharStats(sc, c, stats, chips) {
+  const nv = pickCharStats(sc, stats); let n = 0;
+  c.stats = c.stats || {};
+  for (const d of sc.charStats || []) {
+    if (!(d.key in nv)) continue;
+    const old = c.stats[d.key], had = old !== undefined && old !== null && str(old) !== '';
+    if (had && String(old) === String(nv[d.key])) continue;
+    c.stats[d.key] = nv[d.key]; n++;
+    if (had && chips) chips.push(d.type === 'number' ? { t: `${c.name} ${d.label} ${Math.round(num(old))}→${Math.round(nv[d.key])}`, c: nv[d.key] > num(old) ? 'up' : 'down' } : { t: `${c.name}的${d.label}有变化` });
+  }
+  return n;
+}
+/* 人物的基本信息，一行文字（给 AI 看，也用在推演里） */
+function charBasicText(sc, c, year, brief) {
+  const bits = [], missing = [];
+  if (str(c.gender)) bits.push(str(c.gender)); else missing.push('性别');
+  const age = ageOf(c, year); if (age !== null) bits.push(`${age} 岁`); else missing.push('年龄');
+  for (const d of sc.charStats || []) {
+    const v = c.stats?.[d.key];
+    if (v === undefined || v === null || str(v) === '') { missing.push(d.label); continue; }
+    const t = d.type === 'number' ? String(Math.round(num(v))) : str(v);
+    bits.push(`${d.label}：${brief && t.length > 30 ? t.slice(0, 30) + '…' : t}`);
+  }
+  return bits.join('｜') + (missing.length ? `${bits.length ? '｜' : ''}（待补：${missing.join('、')}）` : '');
+}
+/* 主角年龄由出生年份算出 */
+function syncAges(st, script) {
+  const def = (script?.stats || []).find(x => x.key === 'age');
+  if (!def || st.born === null || st.born === undefined || !Number.isFinite(+st.year)) return;
+  const a = Math.round(st.year - st.born);
+  st.stats.age = def.type === 'number' ? a : `${a}岁`;
+}
+
 /* ---------------- 存档与状态 ---------------- */
-function makeCharacter(c, turn = 0) {
+function makeCharacter(c, turn = 0, refYear) {
   return {
     id: uid(), name: str(c.name), aliases: Array.isArray(c.aliases) ? c.aliases : [],
     avatar: str(c.avatar), identity: str(c.identity), appearance: str(c.appearance), personality: str(c.personality),
     relation: str(c.relation), brief: str(c.brief), opinion: str(c.opinion),
     motive: str(c.motive), backstory: str(c.backstory), secret: str(c.secret), address: str(c.address),
+    gender: str(c.gender), born: bornFrom(c, refYear), stats: c.stats && typeof c.stats === 'object' && !Array.isArray(c.stats) ? clone(c.stats) : {},
     traits: Array.isArray(c.traits) ? c.traits.filter(t => t && str(t.title)) : [],
     status: str(c.status) || '在世', importance: ['major', 'supporting', 'minor'].includes(c.importance) ? c.importance : 'supporting',
     friendliness: clamp(num(c.friendliness, 50), 0, 100), affection: clamp(num(c.affection, 0), 0, 100),
@@ -1989,12 +2350,14 @@ function newSave(script, statValues, persona, saveName, opts = {}) {
     if (o.opening) openings.push(o.opening);
     Object.assign(overrides, o.overrides || {});
   }
-  const characters = chars.map(c => makeCharacter(c, 0));
+  const year = calendarOf(script).start; // 剧本里人物的年龄都是故事开始这一年的
+  const characters = chars.map(c => makeCharacter(c, 0, year));
   for (const [n, ov] of Object.entries(overrides)) { const c = characters.find(x => x.name === n); if (c) Object.assign(c, ov); }
   const timeline = {};
   for (const m of script.milestones || []) if (m.initial) timeline[m.id] = { status: m.initial, outcome: '', turn: 0 };
+  const heroAge = script.stats.some(x => x.key === 'age') ? ageNum(stats.age) : null;
   const state = {
-    turn: 0, stage, stats, persona: str(persona), background: str(opts.background), creation: picked,
+    turn: 0, year, born: heroAge === null ? null : year - heroAge, stage, stats, persona: str(persona), background: str(opts.background), creation: picked,
     openingGuide: [script.openingGuide, ...openings].filter(Boolean).join('\n'),
     timeline, butterflies: [],
     characters,
@@ -2036,9 +2399,18 @@ function migrateSave(save) {
 /* 状态的基本结构：人物字段、时间线、主角性别 */
 function normalizeState(st, script) {
   st.stats = st.stats || {}; st.characters = st.characters || [];
-  for (const c of st.characters) { c.traits = c.traits || []; c.motive = c.motive || ''; c.backstory = c.backstory || ''; c.secret = c.secret || ''; if (c.met === undefined) c.met = true; }
+  for (const c of st.characters) {
+    c.traits = c.traits || []; c.motive = c.motive || ''; c.backstory = c.backstory || ''; c.secret = c.secret || ''; if (c.met === undefined) c.met = true;
+    c.gender = str(c.gender); if (c.born === undefined) c.born = null; if (!c.stats || typeof c.stats !== 'object') c.stats = {};
+  }
   st.timeline = st.timeline || {}; st.butterflies = st.butterflies || []; st.background = st.background || '';
   if (!str(st.stats.gender)) st.stats.gender = scriptGender(script) || defaultGender() || '女';
+  // 年份：旧存档从阶段标签里读（“第二年 · 初秋 · 武魂城”），读不到就是故事开始的那一年
+  const sy = splitStageYear(script, st.stage);
+  if (!Number.isFinite(+st.year) || st.year === null) st.year = sy.year ?? calendarOf(script).start;
+  if (sy.year !== null) st.stage = sy.rest;
+  if (st.born === undefined) { const a = (script?.stats || []).some(x => x.key === 'age') ? ageNum(st.stats.age) : null; st.born = a === null ? null : st.year - a; }
+  syncAges(st, script);
   return st;
 }
 /* 主角的姓名和性别由玩家决定：回退剧情时保持现在的，AI 也不改 */
@@ -2083,11 +2455,12 @@ function globalPrefsText(save) {
 }
 function buildSystemPrompt(save) {
   const sc = save.script, st = save.state, L = sc.relationLabels;
-  const statKeys = sc.stats.filter(x => !IDENTITY_STATS.includes(x.key)).map(x => `${x.key}（${x.label}，${x.type === 'number' ? '数值' + (x.max !== undefined ? `，范围 ${x.min ?? 0}～${x.max}` : '') : '文本'}）`).join('、');
+  const statKeys = sc.stats.filter(x => !IDENTITY_STATS.includes(x.key) && !(x.key === 'age' && st.born !== null && st.born !== undefined)).map(x => `${x.key}（${x.label}，${x.type === 'number' ? '数值' + (x.max !== undefined ? `，范围 ${x.min ?? 0}～${x.max}` : '') : '文本'}）`).join('、');
   const prefs = globalPrefsText(save);
   const hasTimeline = (sc.milestones || []).length > 0;
   const prof = resolveProfile(save);
   const style = resolveStyle(save);
+  const cs = sc.charStats || [];
   return `你是一款中文互动文字冒险游戏的叙事引擎，也是这个故事的主持人。玩家扮演主角「${playerName(save)}」，你来描写世界、扮演其他所有人物，并根据玩家的行动推进剧情。${genderRule(save) ? '\n' + genderRule(save) : ''}
 
 【通用原则】（和剧本规则冲突时，以剧本规则为准）
@@ -2100,9 +2473,11 @@ function buildSystemPrompt(save) {
 7. 人物卡里标注“主角尚不知道”的内容（立场与动机、过往经历、秘密）是人物言行的依据，让玩家在剧情里一点点发现。
 8. 主角在本回合真正了解到某个人物的一段过往、真实动机或秘密时（亲眼所见、对方亲口讲述、可靠的证据或合理的推理），在这个人物的 "reveal" 里记一条词条。词条内容和这个人物的隐藏设定一致；隐藏设定为空时可以合理创造，并同时用 "inner" 补全。揭示稀少而有分量，通常很多回合才有一次，每条词条只记一次。
 9. 人物卡里标注“主角尚未结识”的人物，主角还不认识（最多听说过名字）。他们照常过自己的日子、办自己的事；和主角相遇时，按人物卡来演，并在 characters 里更新这个人。
-${hasTimeline ? `10. 本剧本有一条主线时间线（见【主线时间线】）。故事按节点的顺序一个一个推进，节点之间可以有原创剧情。主角不在场时，节点照样发生，主角可以通过传闻、公文或别人转述得知。每个节点都会以某种形式到来，参与者、过程和结果可以因为主角的行动而改变。剧情进入某个节点时，在 milestones 里标为 active；节点结束时标为 done，并在 outcome 里写明这一档实际发生了什么。
-11. 主角的行动让世界和原著不一样了（某人的命运、某段关系、某个事件的时间或结果变了）时，在 butterflies 里记下：原本会怎样、现在变成了怎样、可能带来什么连锁影响。每条蝴蝶效应都从主角的行动出发，有前因后果；记下之后，后面的剧情接着它往下写。
-12. 时间线和蝴蝶效应是给你的备忘。正文只写故事里的人经历的事，后面会发生什么，让玩家在剧情里自己经历。
+10. 每个人物都有“基本信息”（性别、年龄${cs.length ? '、' + cs.map(d => d.label).join('、') : ''}），这是这个人此刻的真实情况，写到时照着来。人物有了变化，在 characters 的 stats 里写新的值；基本信息里还空着的，这个人出场时补上。
+11. 【当前状态】里写着现在是哪一年。剧情过了一年或更久时，在 year 里写新的年份；每个人的年龄由程序按出生年份计算。
+${hasTimeline ? `12. 本剧本有一条主线时间线（见【主线时间线】）。故事按节点的顺序一个一个推进，节点之间可以有原创剧情。主角不在场时，节点照样发生，主角可以通过传闻、公文或别人转述得知。每个节点都会以某种形式到来，参与者、过程和结果可以因为主角的行动而改变。剧情进入某个节点时，在 milestones 里标为 active；节点结束时标为 done，并在 outcome 里写明这一档实际发生了什么。
+13. 主角的行动让世界和原著不一样了（某人的命运、某段关系、某个事件的时间或结果变了）时，在 butterflies 里记下：原本会怎样、现在变成了怎样、可能带来什么连锁影响。每条蝴蝶效应都从主角的行动出发，有前因后果；记下之后，后面的剧情接着它往下写。
+14. 时间线和蝴蝶效应是给你的备忘。正文只写故事里的人经历的事，后面会发生什么，让玩家在剧情里自己经历。
 ` : ''}${prefs ? `\n【玩家的基础偏好】（适用于所有剧本；和剧本明确的设定冲突时，以剧本为准）\n${prefs}\n` : ''}${prof ? `\n【本局的故事口味：${prof.name}】（决定剧情的重心和走向；和剧本设定冲突时，以剧本为准）\n${profileText(prof)}\n` : ''}
 【剧本：${sc.title}】
 ${sc.world}
@@ -2112,11 +2487,12 @@ ${sc.rules ? `\n【剧本规则】\n${sc.rules}\n` : ''}${style ? `\n【文风�
 正文写完后，另起一行只写 ${STATE_MARK}，接着写一个 JSON 对象，记录本回合造成的状态变化。choices 每回合都写；其余字段有变化才写：
 {
   "choices": ["4 个主角下一步可能的行动，紧接着正文的最后一刻；前 3 个贴合主角的性格和处境、方向各不相同（说话、行动、观察、回避等），第 4 个出人意料、不太像主角平时会做的事；每个 25 字以内，直接写行动或台词"],
-  "stage": "新的阶段标签（时间 · 地点），有变化才写",
+  "year": 新的年份（数字，跨年了才写）,
+  "stage": "新的阶段标签（季节或时段 · 地点），有变化才写",
   "stats": {"属性key": 数值属性写变化量（如 5 或 -3），文本属性写新的完整文本},
   "characters": [
-    {"name": "已有人物名", "friendliness": 变化量, "affection": 变化量, "opinion": "此刻对主角的看法（一句话）", "relation": "新的关系标签", "status": "在世/离开/受伤/死亡等", "note": "本回合此人与主角之间值得长期记住的事（一句话）", "inner": {"motive": "立场与动机", "backstory": "过往经历（性格的来源）", "secret": "秘密"}, "reveal": [{"title": "词条名，8字以内", "text": "主角了解到的内容，60字以内"}]},
-    {"name": "首次登场的人物", "new": true, "identity": "身份", "appearance": "外貌", "personality": "性格", "relation": "与主角的关系", "brief": "一句话简介", "opinion": "对主角的看法", "friendliness": 0到100的初始值, "affection": 0到100的初始值, "importance": "major/supporting/minor", "motive": "立场与动机（主角尚不知道）", "backstory": "过往经历，性格的来源（主角尚不知道）", "secret": "秘密（可省略）"}
+    {"name": "已有人物名", ${cs.length ? '"stats": {"基本信息key": "新的值"}, ' : ''}"friendliness": 变化量, "affection": 变化量, "opinion": "此刻对主角的看法（一句话）", "relation": "新的关系标签", "status": "在世/离开/受伤/死亡等", "note": "本回合此人与主角之间值得长期记住的事（一句话）", "inner": {"motive": "立场与动机", "backstory": "过往经历（性格的来源）", "secret": "秘密"}, "reveal": [{"title": "词条名，8字以内", "text": "主角了解到的内容，60字以内"}]},
+    {"name": "首次登场的人物", "new": true, "gender": "性别", "age": 年龄（数字）, ${cs.length ? '"stats": {"基本信息key": "值"}, ' : ''}"identity": "身份", "appearance": "外貌", "personality": "性格", "relation": "与主角的关系", "brief": "一句话简介", "opinion": "对主角的看法", "friendliness": 0到100的初始值, "affection": 0到100的初始值, "importance": "major/supporting/minor", "motive": "立场与动机（主角尚不知道）", "backstory": "过往经历，性格的来源（主角尚不知道）", "secret": "秘密（可省略）"}
   ],
   "events": [{"title": "15字以内", "description": "60字以内", "characters": ["相关人物"], "consequence": "可能带来的后续影响", "weight": "major或minor"}],
   "resolved": ["本回合已经了结的关键事件标题"],
@@ -2125,13 +2501,15 @@ ${sc.rules ? `\n【剧本规则】\n${sc.rules}\n` : ''}${style ? `\n【文风�
   "milestones": [{"id": "节点 id", "status": "active 或 done", "outcome": "本档实际发生的情况（done 时必填，写清与原著的不同）"}],
   "butterflies": [{"text": "因为……，现在……", "canon": "原著中本应……", "ripple": "可能的连锁影响"}]` : ''}
 }
-说明：可用的属性 key 有 ${statKeys}。${L.friendliness}（friendliness）表示信任与亲近，${L.affection}（affection）表示心动与恋慕，两者互相独立，范围都是 0～100，每回合变化一般在 ±10 以内。会影响后续剧情的转折才记为 events，通常每回合 0～2 条。有名有姓、可能再次出现的人物首次登场时，用 "new": true 建卡，并为主要和次要人物写好 motive 和 backstory。"inner" 用来补写这个人物还空着的隐藏设定。choices 给出主角接下来可以做的几种行动，由玩家来选。`;
+说明：主角可用的属性 key 有 ${statKeys}。${cs.length ? `人物的基本信息 key 有 ${cs.map(d => `${d.key}（${d.label}${d.type === 'number' ? '，数值' : ''}）`).join('、')}，写新的值。` : ''}${L.friendliness}（friendliness）表示信任与亲近，${L.affection}（affection）表示心动与恋慕，两者互相独立，范围都是 0～100，每回合变化一般在 ±10 以内。会影响后续剧情的转折才记为 events，通常每回合 0～2 条。有名有姓、可能再次出现的人物首次登场时，用 "new": true 建卡，并为主要和次要人物写好 motive 和 backstory。"inner" 用来补写这个人物还空着的隐藏设定。choices 给出主角接下来可以做的几种行动，由玩家来选。`;
 }
 
 const trimEnd = t => str(t).replace(/[。；;，,\s]+$/, ''); // 拼接多段文字时去掉末尾标点，免得出现“。；”
-function fmtCharacter(c, L, brief) {
+function fmtCharacter(c, L, brief, sc, year) {
+  const basic = sc ? `  基本信息：${charBasicText(sc, c, year, brief)}` : '';
   if (c.met === false) {
     const lines = [`◆ ${c.name}｜${c.identity || '身份不明'}｜〔主角尚未结识〕`];
+    if (basic) lines.push(basic);
     if (c.address) lines.push(`  称呼：${c.address}`);
     if (c.personality) lines.push(`  性格：${c.personality}`);
     if (c.brief) lines.push(`  简介：${c.brief}`);
@@ -2141,8 +2519,9 @@ function fmtCharacter(c, L, brief) {
     return lines.join('\n');
   }
   const head = `◆ ${c.name}${c.aliases?.length ? `（又名${c.aliases.join('、')}）` : ''}｜${c.identity || '身份不明'}｜与主角：${c.relation || '—'}｜${L.friendliness} ${Math.round(c.friendliness)} · ${L.affection} ${Math.round(c.affection)}｜${c.status || '在世'}`;
-  if (brief) return head + (c.brief ? `\n  ${c.brief}` : '');
+  if (brief) return head + (basic ? '\n' + basic : '') + (c.brief ? `\n  ${c.brief}` : '');
   const lines = [head];
+  if (basic) lines.push(basic);
   if (c.address) lines.push(`  称呼：${c.address}`);
   if (c.personality) lines.push(`  性格：${c.personality}`);
   if (c.appearance) lines.push(`  外貌：${c.appearance}`);
@@ -2198,13 +2577,13 @@ function buildUserPrompt(save, action) {
     if (x.type === 'number') return `${x.label} ${Math.round(num(v))}${x.max !== undefined ? '/' + x.max : ''}`;
     return `${x.label}：${str(v) || '—'}`;
   });
-  parts.push(`【当前状态】第 ${st.turn + 1} 回合｜阶段：${st.stage || '未标注'}\n主角 ${statLines.join('｜')}`);
+  parts.push(`【当前状态】第 ${st.turn + 1} 回合｜时间：${yearLabel(sc, st.year)} · ${st.stage || '未标注'}\n主角 ${statLines.join('｜')}`);
   if (st.persona) parts.push(`【主角性格】\n${st.persona}`);
   if (st.background) parts.push(`【主角身世】\n${st.background}`);
   // 人物
   const recentCut = st.turn - 10;
   const chars = [...st.characters].sort((a, b) => ((a.met === false) - (b.met === false)) || (IMPORTANCE_ORDER[a.importance] - IMPORTANCE_ORDER[b.importance]) || (b.lastTurn - a.lastTurn));
-  if (chars.length) parts.push(`【人物卡】\n${chars.map(c => fmtCharacter(c, L, c.importance === 'minor' && c.lastTurn < recentCut)).join('\n')}`);
+  if (chars.length) parts.push(`【人物卡】\n${chars.map(c => fmtCharacter(c, L, c.importance === 'minor' && c.lastTurn < recentCut, sc, st.year)).join('\n')}`);
   // 背包与目标
   if (st.items.length) parts.push(`【物品】${st.items.map(i => `${i.name}${i.count > 1 ? '×' + i.count : ''}${i.desc ? `（${i.desc}）` : ''}`).join('；')}`);
   const objs = st.objectives.filter(o => o.status === 'active');
@@ -2394,13 +2773,23 @@ function applyReveal(c, reveal, turn, chips) {
 function applyDelta(save, delta, turn) {
   const sc = save.script, st = save.state, L = sc.relationLabels, chips = [];
   if (!delta || typeof delta !== 'object') return chips;
-  // 阶段
-  if (str(delta.stage) && str(delta.stage) !== st.stage) st.stage = str(delta.stage);
+  // 年份：只往前走
+  let newYear = delta.year !== undefined && delta.year !== null && str(delta.year) !== '' ? ageNum(delta.year) : null;
+  // 阶段（开头如果带了年份，年份单独记）
+  if (str(delta.stage)) {
+    const sy = splitStageYear(sc, delta.stage);
+    if (newYear === null && sy.year !== null) newYear = sy.year;
+    if (sy.rest && sy.rest !== st.stage) st.stage = sy.rest;
+  }
+  if (newYear !== null && newYear > st.year) {
+    const from = st.year; st.year = newYear; syncAges(st, sc);
+    chips.push({ t: `${yearLabel(sc, newYear)}（过了 ${newYear - from} 年）`, c: 'ev' });
+  }
   // 属性
   if (delta.stats && typeof delta.stats === 'object') {
     for (const [k, v] of Object.entries(delta.stats)) {
       const def = sc.stats.find(x => x.key === k || x.label === k);
-      if (!def || IDENTITY_STATS.includes(def.key)) continue;
+      if (!def || IDENTITY_STATS.includes(def.key) || (def.key === 'age' && st.born !== null && st.born !== undefined)) continue;
       if (def.type === 'number') {
         const d = num(v, 0); if (!d) continue;
         const before = num(st.stats[def.key]);
@@ -2422,7 +2811,7 @@ function applyDelta(save, delta, turn) {
       if (!c) {
         if (!cd.new && !cd.identity && !cd.brief && !cd.personality) continue;
         const inner = cd.inner && typeof cd.inner === 'object' ? cd.inner : {};
-        c = makeCharacter({ ...cd, motive: cd.motive || inner.motive, backstory: cd.backstory || inner.backstory, secret: cd.secret || inner.secret, traits: [], friendliness: cd.friendliness ?? 50, affection: cd.affection ?? 0 }, turn);
+        c = makeCharacter({ ...cd, stats: pickCharStats(sc, cd.stats), born: undefined, motive: cd.motive || inner.motive, backstory: cd.backstory || inner.backstory, secret: cd.secret || inner.secret, traits: [], friendliness: cd.friendliness ?? 50, affection: cd.affection ?? 0 }, turn, st.year);
         if (cd.note) c.notes.push({ turn, text: str(cd.note) });
         applyReveal(c, cd.reveal, turn, chips);
         st.characters.push(c);
@@ -2441,6 +2830,9 @@ function applyDelta(save, delta, turn) {
         if (real) chips.push({ t: `${c.name} ${lab}${real > 0 ? '+' : ''}${real}`, c: cls || (real > 0 ? 'up' : 'down') });
       }
       for (const f of ['opinion', 'relation', 'status', 'identity', 'appearance', 'address']) if (str(cd[f])) c[f] = str(cd[f]);
+      if (str(cd.gender) && !str(c.gender)) c.gender = str(cd.gender);
+      if (cd.age !== undefined && (c.born === null || c.born === undefined)) { const a = ageNum(cd.age); if (a !== null) c.born = st.year - a; }
+      mergeCharStats(sc, c, cd.stats, chips);
       if (['major', 'supporting', 'minor'].includes(cd.importance)) c.importance = cd.importance;
       if (str(cd.note)) c.notes.push({ turn, text: str(cd.note) });
       const inner = cd.inner && typeof cd.inner === 'object' ? cd.inner : {};
@@ -2572,16 +2964,20 @@ async function playTurn(action) {
     renderLog(); setComposerBusy(false); await saveSettings(); return;
   }
   pushSnapshot(save, turn);
+  const yearBefore = save.state.year;
   const chips = applyDelta(save, delta, turn);
   const warns = [];
   if (!delta) warns.push(hadMark ? '状态更新的格式有误，本回合属性和人物没有变化。' : 'AI 没有按格式返回状态更新，本回合属性和人物没有变化。');
   const choices = choicesOf(delta);
   save.state.turn = turn;
-  save.log.push({ id: uid(), turn, action, narrative, choices, chips, warns, at: Date.now(), ...(delta ? {} : { raw: result.text.slice(-4000) }) });
+  const entry = { id: uid(), turn, action, narrative, choices, chips, warns, at: Date.now(), ...(delta ? {} : { raw: result.text.slice(-4000) }) };
+  if (save.state.year - yearBefore >= 2) entry.evolve = { from: yearBefore, to: save.state.year, status: 'pending' };
+  save.log.push(entry);
   G.busy = false; G.stream = null; G.abort = null;
   await persist(save); await saveSettings();
   renderLog(); renderGameHeader(); setComposerBusy(false); scrollToEntryStart();
-  if (!choices.length) fillChoices(save.log[save.log.length - 1]);
+  if (!choices.length) fillChoices(entry);
+  if (entry.evolve) await evolveAfterSkip(save, entry);
   maybeSummarize();
 }
 
@@ -2622,7 +3018,7 @@ async function summarizeTurns(save, entries) {
   const evs = st.events.map(e => `${e.resolved ? '[已了结]' : '[未了结]'}${e.title}`).join('；');
   const messages = [
     { role: 'system', content: '你是长篇互动小说的剧情记录员，负责维护一份“剧情摘要”，供作者续写时回顾前情。你只输出摘要正文。' },
-    { role: 'user', content: `剧本：${sc.title}　主角：${playerName(save)}
+    { role: 'user', content: `剧本：${sc.title}　主角：${playerName(save)}　现在：${yearLabel(sc, st.year)}
 
 【旧的剧情摘要】
 ${st.memory || '（暂无，这是第一次总结）'}
@@ -2634,7 +3030,7 @@ ${entries.map(e => `〔第${e.turn}回合〕${e.action ? '玩家行动：' + e.a
 【参考：关键事件】${evs || '无'}
 
 请把新剧情并入旧摘要，写一份更新后的完整剧情摘要：
-1. 按时间顺序，用“第X回合前后”标注大致位置；越早的剧情写得越概括，最近的写得具体一些。
+1. 按时间顺序，用年份和“第X回合前后”标注大致位置；越早的剧情写得越概括，最近的写得具体一些。
 2. 保留已经发生的重要事实和转折、人物之间的承诺、约定、欠下的人情、谎言和秘密（写明谁知道、谁不知道）、埋下的伏笔、还没解决的问题、主角做过的关键选择。
 3. 只记事实，用平实的叙述。
 4. 最后单独一段写“当前局势”：主角此刻在哪、和谁在一起、正在做什么、面临什么。
@@ -2686,6 +3082,76 @@ async function startOpening(save) {
   const last = save.log[save.log.length - 1];
   if (last && str(last.narrative) && !last.choices?.length) fillChoices(last);
 }
+/* ---------------- 时间推进：一次过了两年以上，按这个世界的规则推演所有人（含主角）的变化 ---------------- */
+async function evolveAfterSkip(save, entry) {
+  const ev = entry.evolve; if (!ev || ev.status === 'done' || G.busy) return;
+  const sc = save.script, st = save.state, n = ev.to - ev.from;
+  G.busy = true; G.abort = new AbortController(); G.evolving = entry.id; ev.status = 'running'; delete ev.error;
+  renderLog(); setComposerBusy(true); scrollLogToEnd();
+  try {
+    const people = st.characters.filter(c => !isGone(c));
+    const heroKeys = sc.stats.filter(x => !IDENTITY_STATS.includes(x.key) && x.key !== 'age');
+    const heroStats = heroKeys.map(d => `${d.label}：${d.type === 'number' ? Math.round(num(st.stats[d.key])) : str(st.stats[d.key]) || '—'}`).join('｜');
+    const cs = sc.charStats || [];
+    const r = await chatOnce([
+      { role: 'system', content: '你是互动小说的世界推演员：故事里一下子过去了好几年，你按这个世界的规则推演每个人的变化。你只输出 JSON。' },
+      { role: 'user', content: `【剧本】${sc.title}
+${sc.world}
+${sc.growth ? `\n【人物怎样随时间变化】\n${sc.growth}\n` : ''}
+【这段时间】从 ${yearLabel(sc, ev.from)} 到 ${yearLabel(sc, ev.to)}，过了 ${n} 年。
+
+【这一回合的剧情】
+${entry.action ? `玩家行动：${entry.action}\n` : ''}${entry.narrative}
+
+【主角现在的情况】${playerName(save)}｜${genderOf(save)}｜${ageNum(st.stats.age) ?? '?'} 岁｜${heroStats}
+${st.background ? `身世：${st.background.slice(0, 200)}\n` : ''}
+【人物】（基本信息是这些年开始时的，年龄已经算到 ${yearLabel(sc, ev.to)}）
+${people.map(c => `- ${c.name}｜${c.identity || '身份不明'}｜${charBasicText(sc, c, ev.to)}｜${c.status || '在世'}${c.met === false ? '｜主角还不认识' : `｜与主角：${c.relation || '—'}`}`).join('\n')}
+
+请推演到 ${yearLabel(sc, ev.to)} 时每个人的情况：
+1. 按每个人的天赋、处境和这个世界的规则，写出变化了的基本信息${cs.length ? `（key：${cs.map(d => `${d.key}=${d.label}`).join('、')}）` : ''}；这一回合剧情里写到的变化，照剧情来。
+2. 这些年里去世的人（寿数到了、战死、意外等），status 写“去世”，note 写一句原因；其他人如果有这些年里最重要的经历，写在 note 里（一句话，可以省略）。
+3. 主角的变化写在 player.stats 里，数值写新的值（key：${heroKeys.map(d => `${d.key}=${d.label}`).join('、')}）；剧情里已经交代的，照剧情来。
+只输出 {"player": {"stats": {}}, "characters": [{"name": "", "stats": {}, "status": "", "note": ""}]}` },
+    ], { temperature: 0.7, maxTokens: 8000, helper: true, signal: G.abort.signal });
+    addUsage(save, r.usage);
+    const o = parseLooseJSON(r.text);
+    if (!o || (!Array.isArray(o.characters) && !o.player)) throw new Error('AI 返回的内容无法解析');
+    entry.chips = [...(entry.chips || []), ...applyEvolution(save, o, entry.turn, n)];
+    ev.status = 'done';
+  } catch (e) {
+    ev.status = 'failed'; ev.error = e.name === 'AbortError' ? '已停止' : String(e.message || e).slice(0, 80);
+  }
+  G.busy = false; G.abort = null; G.evolving = null;
+  await persist(save); await saveSettings();
+  renderLog(); renderGameHeader(); setComposerBusy(false); scrollLogToEnd();
+}
+function applyEvolution(save, o, turn, years) {
+  const sc = save.script, st = save.state, chips = [];
+  let changed = 0;
+  for (const cd of Array.isArray(o.characters) ? o.characters : []) {
+    const c = cd && findChar(st.characters, cd.name); if (!c) continue;
+    let touched = mergeCharStats(sc, c, cd.stats, null) > 0;
+    if (str(cd.status) && str(cd.status) !== c.status) { c.status = str(cd.status); touched = true; if (isGone(c)) chips.push({ t: `${c.name} ${c.status}`, c: 'down' }); }
+    if (str(cd.note)) { c.notes = c.notes || []; c.notes.push({ turn, text: `（这 ${years} 年）${str(cd.note)}` }); touched = true; }
+    if (touched) changed++;
+  }
+  const ps = o.player && typeof o.player === 'object' ? o.player.stats : null;
+  if (ps && typeof ps === 'object') {
+    for (const def of sc.stats) {
+      if (IDENTITY_STATS.includes(def.key) || def.key === 'age') continue;
+      const v = ps[def.key] ?? ps[def.label];
+      if (v === undefined || v === null || str(v) === '') continue;
+      if (def.type === 'number') {
+        const before = num(st.stats[def.key]), after = clamp(num(v, before), def.min, def.max);
+        if (Math.round(after) !== Math.round(before)) { st.stats[def.key] = after; chips.push({ t: `${def.label} ${Math.round(before)}→${Math.round(after)}`, c: after > before ? 'up' : 'down' }); }
+      } else if (str(v) !== str(st.stats[def.key])) { st.stats[def.key] = str(v); chips.push({ t: `${def.label}：${str(v)}` }); }
+    }
+  }
+  chips.unshift({ t: `${years} 年过去，${changed} 个人的情况已推演`, c: 'ev' });
+  return chips;
+}
+
 /* ---------------- 选项：缺失时补生成、换一批 ---------------- */
 async function genChoices(save, entry, avoid = []) {
   const st = save.state, sc = save.script;
@@ -3179,7 +3645,7 @@ async function genFieldOption(script, f, ctx, wish) {
     '"label"：选项名，15 字以内',
     `"desc"：60～150 字的说明，用 {name} 指代主角，第三人称用“${pronounFor(ctx.gender)}”`,
     statDefs.length ? `"stats"：可以用这些属性：${statDefs.map(d => `${d.key}（${d.label}，${d.type === 'number' ? '数字' + (d.min !== undefined || d.max !== undefined ? `，${d.min ?? ''}～${d.max ?? ''}` : '') : '文本'}）`).join('、')}` : null,
-    sch.keys.includes('characters') ? '"characters"：0～1 个与这个设定相关的原创人物，字段与示例相同（含只给 AI 看的 motive、backstory、secret），"met" 为 true' : null,
+    sch.keys.includes('characters') ? `"characters"：0～1 个与这个设定相关的原创人物，字段与示例相同（含只给 AI 看的 motive、backstory、secret，以及 gender、age${(script.charStats || []).length ? `、stats（${script.charStats.map(d => d.key).join('、')}）` : ''}），"met" 为 true` : null,
     sch.keys.includes('overrides') ? `"overrides"：主角开局时已经认识的原著人物（0～3 人），键为人物名，从这些人里选：${roster.join('、')}；值为 {"met": true, "relation": "关系", "friendliness": 0～100, "opinion": "此人对主角的看法"}` : null,
     sch.keys.includes('stage') ? '"stage"：开局阶段标签（时间 · 地点）' : null,
     sch.keys.includes('opening') ? '"opening"：主角开局时所处的环境和平时的日子，比如常在哪些地方活动、身边有哪些人（100 字以内）' : null,
@@ -3295,11 +3761,18 @@ async function syncScript(save, lib) {
     for (const [a, b] of swaps) for (const k of ['background', 'openingGuide']) st[k] = String(st[k] || '').replaceAll(a, b);
     st.openingGuide = st.openingGuide.split('\n').filter(x => x.trim()).join('\n');
     for (const d of lib.stats) if (!(d.key in st.stats)) st.stats[d.key] = d.type === 'number' ? num(d.initial, 0) : str(d.initial);
+    const y0 = calendarOf(lib).start;
     for (const c of lib.characters) {
       const ex = st.characters.find(x => x.name === c.name);
-      if (ex) { for (const f of STATIC) if (c[f] !== undefined && str(c[f])) ex[f] = str(c[f]); }
-      else st.characters.push(makeCharacter(c, st.turn));
+      if (ex) {
+        for (const f of STATIC) if (c[f] !== undefined && str(c[f])) ex[f] = str(c[f]);
+        if (!str(ex.gender) && str(c.gender)) ex.gender = str(c.gender);
+        if (ex.born === null || ex.born === undefined) ex.born = bornFrom(c, y0);
+        ex.stats = ex.stats || {};
+        for (const [k, v] of Object.entries(c.stats || {})) if (ex.stats[k] === undefined || str(ex.stats[k]) === '') ex.stats[k] = v;
+      } else st.characters.push(makeCharacter(c, st.turn, y0));
     }
+    normalizeState(st, lib);
   };
   upgrade(save.state);
   for (const sn of save.snapshots || []) if (sn.state) upgrade(sn.state); // 回退和重新生成开场时也用新资料
@@ -3338,7 +3811,7 @@ function renderPaceBar() {
 function renderGameHeader() {
   const sv = G.save; if (!sv) return;
   $('#g-title').textContent = sv.script.title;
-  $('#g-sub').textContent = `${sv.state.stage || '—'} · 第 ${sv.state.turn} 回合${G.summarizing ? ' · 整理记忆中' : ''}`;
+  $('#g-sub').textContent = `${yearLabel(sv.script, sv.state.year)}${sv.state.stage ? ' · ' + sv.state.stage : ''} · 第 ${sv.state.turn} 回合${G.summarizing ? ' · 整理记忆中' : ''}`;
 }
 function narrHTML(text) {
   return text.split(/\n+/).map(p => p.trim()).filter(Boolean).map(p => `<p>${esc(p).replace(/(“[^”]{1,400}”|「[^」]{1,400}」)/g, '<span class="dlg">$1</span>')}</p>`).join('');
@@ -3374,6 +3847,12 @@ function renderLog() {
     if (e.chips?.length) el.append(h('div', { class: 'chips' }, ...e.chips.map(c => h('span', { class: 'chip' + (c.c ? ' c-' + c.c : '') }, c.t))));
     for (const w of e.warns || []) el.append(h('div', { class: 'warn-line' }, w));
     if (e.raw && e.warns?.length) el.append(rawViewer(e.raw));
+    if (e.evolve && e.evolve.status !== 'done') {
+      const n = e.evolve.to - e.evolve.from;
+      if (G.evolving === e.id) el.append(h('div', { class: 'streaming-hint' }, h('span', { class: 'dots' }, h('i'), h('i'), h('i')), h('span', {}, `正在按这个世界的规则，推演这 ${n} 年里每个人的变化…`)));
+      else if (isLast && !G.busy && !G.stream) el.append(h('div', { class: 'warn-line' }, e.evolve.status === 'failed' ? `这 ${n} 年里人物的变化没推演成功：${e.evolve.error || ''}` : `这 ${n} 年里人物的变化还没推演。`),
+        h('div', { class: 'tools' }, h('button', { class: 'btn sm', onclick: () => evolveAfterSkip(sv, e) }, `推演这 ${n} 年的变化`)));
+    }
     if (isLast && !G.busy && !G.stream) {
       if (str(e.narrative)) el.append(choicesBlock(e));
       if (e.turn === 0 && !sv.script.opening && (snapTurns.has(0) || !str(e.narrative))) el.append(h('div', { class: 'tools' },
@@ -3512,8 +3991,14 @@ function sheetStatus(b) {
   b.append(h('div', { class: 'row', style: 'justify-content:space-between;margin-top:22px;margin-bottom:10px' }, h('span', { class: 'sec-h', style: 'margin:0' }, '物品'), h('button', { class: 'btn sm', onclick: () => editItem(null) }, '添加')));
   if (!st.items.length) b.append(h('div', { class: 'empty' }, '身上空空如也。'));
   else b.append(h('div', { class: 'card' }, ...st.items.map(it => h('div', { class: 'stat-row', onclick: () => editItem(it) }, h('span', { class: 'lbl' }, it.name), h('span', { class: 'small muted' }, it.desc || ''), h('span', { class: 'val' }, '×' + it.count)))));
-  b.append(h('div', { class: 'sec-h' }, '当前阶段'));
-  b.append(h('div', { class: 'card', style: 'cursor:pointer', onclick: async () => { if (guardBusy()) return; const r = await formModal('当前阶段', [{ key: 'stage', label: '时间 · 地点' }], { stage: st.stage }); if (r) { st.stage = str(r.stage); commit(); } } }, st.stage || '—'));
+  b.append(h('div', { class: 'sec-h' }, '时间'));
+  b.append(h('div', { class: 'card', style: 'cursor:pointer', onclick: async () => {
+    if (guardBusy()) return;
+    const r = await formModal('时间', [{ key: 'year', label: `年份（${calendarOf(sc).format.replace('{n}', 'N')} 里的 N）`, hint: '改年份时，每个人的年龄会跟着变，其他基本信息不会自动推演。' }, { key: 'stage', label: '季节或时段 · 地点' }], { year: st.year, stage: st.stage });
+    if (!r) return;
+    const y = ageNum(r.year); if (y !== null) st.year = y;
+    st.stage = str(r.stage); syncAges(st, sc); commit();
+  } }, `${yearLabel(sc, st.year)}${st.stage ? ' · ' + st.stage : ''}`));
 }
 async function editStat(def) {
   if (guardBusy()) return;
@@ -3521,6 +4006,7 @@ async function editStat(def) {
   const r = await formModal(def.label, [{ key: 'v', label: def.type === 'number' ? `数值${def.max !== undefined ? `（${def.min ?? 0}～${def.max}）` : ''}` : '内容', type: def.type === 'number' ? 'number' : 'textarea', rows: 2 }], { v: st.stats[def.key] });
   if (!r) return;
   st.stats[def.key] = def.type === 'number' ? clamp(num(r.v), def.min, def.max) : str(r.v);
+  if (def.key === 'age') { const a = ageNum(r.v); if (a !== null) { st.born = st.year - a; syncAges(st, G.save.script); } }
   commit('已修改');
 }
 async function editItem(it) {
@@ -3551,6 +4037,7 @@ function sheetChars(b) {
       avatarEl(c),
       h('div', { class: 'body' },
         h('div', { class: 'name' }, h('b', {}, c.name), h('small', {}, [c.relation, c.identity].filter(Boolean).join(' · ')), c.status && c.status !== '在世' ? h('span', { class: 'pill fail' }, c.status) : null, h('small', {}, IMPORTANCE_TEXT[c.importance])),
+        basicLine(sv.script, c, st.year),
         c.opinion ? h('div', { class: 'op' }, `“${c.opinion}”`) : h('div', { class: 'op' }, c.brief || ''),
         traitTags(c),
         h('div', { class: 'mini-meters' },
@@ -3560,9 +4047,21 @@ function sheetChars(b) {
   b.append(wrap);
   if (unmet.length) {
     const d = h('details', { class: 'fold unmet' }, h('summary', {}, `尚未结识的人物（${unmet.length}）`));
-    for (const c of unmet) d.append(h('div', { class: 'char', style: 'margin-top:12px', onclick: () => editChar(c) }, avatarEl(c), h('div', { class: 'body' }, h('div', { class: 'name' }, h('b', {}, c.name), h('small', {}, c.identity || '')), h('div', { class: 'op' }, c.brief || ''))));
+    for (const c of unmet) d.append(h('div', { class: 'char', style: 'margin-top:12px', onclick: () => editChar(c) }, avatarEl(c), h('div', { class: 'body' }, h('div', { class: 'name' }, h('b', {}, c.name), h('small', {}, c.identity || '')), basicLine(sv.script, c, st.year), h('div', { class: 'op' }, c.brief || ''))));
     b.append(d);
   }
+}
+/* 人物卡上的一行基本信息：性别 · 年龄 · 剧本的基础栏（长的只留开头） */
+function basicLine(sc, c, year) {
+  const bits = [];
+  if (str(c.gender)) bits.push(str(c.gender));
+  const a = ageOf(c, year); if (a !== null) bits.push(`${a} 岁`);
+  for (const d of sc.charStats || []) {
+    const v = c.stats?.[d.key]; if (v === undefined || v === null || str(v) === '') continue;
+    const t = d.type === 'number' ? `${d.label} ${Math.round(num(v))}` : str(v);
+    if (t.length <= 16) bits.push(t);
+  }
+  return bits.length ? h('div', { class: 'basic' }, bits.join(' · ')) : null;
 }
 function hasHidden(c) { return !!(c.motive || c.backstory || c.secret); }
 function traitTags(c) {
@@ -3579,14 +4078,18 @@ function traitPanel(c) {
 }
 async function editChar(c) {
   if (guardBusy()) return;
-  const st = G.save.state, L = G.save.script.relationLabels;
-  const base = c ? { ...c, met: c.met !== false, aliases: (c.aliases || []).join('、'), notes: (c.notes || []).map(n => `${n.turn}|${n.text}`).join('\n') } : { friendliness: 50, affection: 0, importance: 'supporting', status: '在世', met: true };
+  const st = G.save.state, sc = G.save.script, L = sc.relationLabels, cs = sc.charStats || [];
+  const base = c ? { ...c, met: c.met !== false, aliases: (c.aliases || []).join('、'), notes: (c.notes || []).map(n => `${n.turn}|${n.text}`).join('\n'), age: ageOf(c, st.year) ?? '' } : { friendliness: 50, affection: 0, importance: 'supporting', status: '在世', met: true };
+  for (const d of cs) base['cs_' + d.key] = c?.stats?.[d.key] ?? '';
   const r = await formModal(c ? c.name : '添加人物', [
     { key: 'name', label: '名字' },
     { key: 'aliases', label: '别名', hint: '用顿号分隔。AI 用别名称呼时也能对上这张卡。' },
     { key: 'identity', label: '身份' },
     { key: 'relation', label: '与主角的关系' },
     { key: 'address', label: '称呼', hint: '大家怎么称呼 Ta，例如：同辈直呼“列娜”；下属称“圣女殿下”。' },
+    { key: 'gender', label: '性别' },
+    { key: 'age', label: `年龄（${yearLabel(sc, st.year)}）`, placeholder: '例如：20', hint: '之后会按出生年份自动长大。' },
+    ...cs.map(d => ({ key: 'cs_' + d.key, label: d.label, type: d.type === 'number' ? 'text' : 'textarea', rows: 2, hint: d.hint || null })),
     { key: 'importance', label: '重要程度', type: 'select', options: [['major', '主要'], ['supporting', '次要'], ['minor', '路人']] },
     { key: 'status', label: '状态', hint: '在世、离开、受伤、死亡等' },
     { key: 'met', label: '主角已经结识此人', type: 'checkbox', hint: '未结识的人物只出现在“尚未结识”里，AI 知道主角还不认识 Ta。' },
@@ -3607,6 +4110,8 @@ async function editChar(c) {
     name: str(r.name), aliases: str(r.aliases).split(/[、,，]/).map(str).filter(Boolean), identity: str(r.identity), relation: str(r.relation), address: str(r.address), importance: r.importance,
     status: str(r.status) || '在世', met: !!r.met, friendliness: clamp(num(r.friendliness), 0, 100), affection: clamp(num(r.affection), 0, 100), opinion: str(r.opinion), personality: str(r.personality),
     appearance: str(r.appearance), brief: str(r.brief), motive: str(r.motive), backstory: str(r.backstory), secret: str(r.secret),
+    gender: str(r.gender), born: ageNum(r.age) === null ? (c ? c.born : null) : st.year - ageNum(r.age),
+    stats: Object.fromEntries(cs.filter(d => str(r['cs_' + d.key]) !== '').map(d => [d.key, d.type === 'number' ? clamp(num(r['cs_' + d.key]), d.min, d.max) : str(r['cs_' + d.key])])),
     notes: str(r.notes).split('\n').map(str).filter(Boolean).map(line => { const m = line.match(/^(\d+)\s*[|｜]\s*(.+)$/); return m ? { turn: +m[1], text: m[2] } : { turn: st.turn, text: line }; }),
   };
   if (c) Object.assign(c, upd); else st.characters.push(makeCharacter(upd, st.turn));
@@ -3949,7 +4454,7 @@ async function applyUpdate() {
 })();
 
 // 供测试使用
-window.__wenyou = { G, S: () => S, buildSystemPrompt, buildUserPrompt, splitOutput, applyDelta, parseLooseJSON, normalizeScript, persist };
+window.__wenyou = { G, S: () => S, buildSystemPrompt, buildUserPrompt, splitOutput, applyDelta, parseLooseJSON, normalizeScript, persist, ageNum, splitStageYear, yearLabel, charBasicText, applyEvolution };
 </script>
 </body>
 </html>

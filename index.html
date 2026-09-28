@@ -379,10 +379,13 @@ const DB = {
 const DEFAULT_SETTINGS = {
   baseUrl: 'https://api.deepseek.com',
   apiKey: '',
-  model: 'deepseek-flash',
-  disableThinking: true,
+  model: 'deepseek-v4-pro',
+  thinking: 'enabled',    // enabled 开启 | disabled 关闭 | default 不发送参数（交给服务商默认）
+  effort: 'high',         // 思考强度 low | high | max
+  modelList: [],          // 上次从接口拉到的模型
+  settingsV: 2,
   temperature: 1.3,
-  maxTokens: 8000,
+  maxTokens: 32000,
   length: 'mid',          // 新游戏默认篇幅 short | mid | long
   pace: 'normal',         // 新游戏默认节奏 slow | normal | fast
   prefs: null,            // 基础偏好，见 DEFAULT_PREFS
@@ -410,7 +413,15 @@ async function loadSettings() {
   if (!Array.isArray(S.customStyles)) S.customStyles = [];
   if (!S.scriptPrefs || typeof S.scriptPrefs !== 'object') S.scriptPrefs = {};
   if (!S.aiOptions || typeof S.aiOptions !== 'object') S.aiOptions = {};
-  if (S.maxTokens === 3000) S.maxTokens = 8000; // 旧默认值太小，思考模式下会被思考过程用光
+  const savedV = rec ? (rec.value?.settingsV || 1) : DEFAULT_SETTINGS.settingsV;
+  if (savedV < 2) {
+    // v2：玩家要求默认开启思考模式；输出上限要容得下思考过程
+    S.thinking = 'enabled'; S.effort = S.effort || 'high';
+    S.maxTokens = Math.max(num(S.maxTokens, 0), 32000);
+    if (S.model === 'deepseek-flash') S.model = 'deepseek-v4-pro'; // 旧默认模型 → 效果最好的模型
+    delete S.disableThinking; S.settingsV = 2;
+  }
+  if (!Array.isArray(S.modelList)) S.modelList = [];
   if (S.defaultProfile !== 'none' && !S.profiles.find(p => p.id === S.defaultProfile)) S.defaultProfile = S.profiles[0].id;
   applyTheme();
 }
@@ -2087,10 +2098,29 @@ function buildUserPrompt(save, action) {
 }
 
 /* ---------------- API ---------------- */
-function apiBody(extra) {
+/* helper：摘要、开局生成等辅助任务，思考强度用“低”，免得等太久 */
+function apiBody(extra, opts = {}) {
   const b = { model: S.model, temperature: Number(S.temperature), max_tokens: Number(S.maxTokens), ...extra };
-  if (S.disableThinking) b.thinking = { type: 'disabled' };
+  if (S.thinking === 'enabled') {
+    b.thinking = { type: 'enabled' };
+    b.reasoning_effort = opts.helper ? 'low' : (S.effort || 'high');
+    b.max_tokens = Math.max(num(b.max_tokens, 0), num(S.maxTokens, 32000), 16000); // 思考过程也算在输出额度里
+  } else if (S.thinking === 'disabled') b.thinking = { type: 'disabled' };
   return b;
+}
+const MODEL_INFO = {
+  'deepseek-v4-pro': { name: 'DeepSeek V4 Pro', tag: '效果最好', desc: '文笔、推理和长线剧情的一致性都最好，价格约为 Flash 的 4 倍。想要最好玩就选它。' },
+  'deepseek-flash': { name: 'DeepSeek V4.1 Flash', tag: '快', desc: '速度快、价格低，文笔也不错，适合节奏快的剧本。' },
+};
+const isDeepSeek = () => /deepseek\.com/i.test(S.baseUrl || '');
+async function fetchModels() {
+  const url = S.baseUrl.replace(/\/+$/, '').replace(/\/chat\/completions$/, '') + '/models';
+  const res = await fetch(url, { headers: { Authorization: 'Bearer ' + S.apiKey } });
+  if (!res.ok) throw await apiError(res);
+  const j = await res.json();
+  const ids = (Array.isArray(j.data) ? j.data : Array.isArray(j) ? j : []).map(m => str(m.id || m.name)).filter(Boolean);
+  if (!ids.length) throw new Error('接口没有返回模型列表');
+  return [...new Set(ids)].sort();
 }
 function apiUrl() { return S.baseUrl.replace(/\/+$/, '').replace(/\/chat\/completions$/, '') + '/chat/completions'; }
 async function apiError(res) {
@@ -2111,7 +2141,7 @@ async function chatStream(messages, { onText, onThinking, signal }) {
   const res = await fetch(apiUrl(), {
     method: 'POST', signal,
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + S.apiKey },
-    body: JSON.stringify(apiBody({ messages, stream: true, stream_options: { include_usage: true } })),
+    body: JSON.stringify(apiBody({ messages, stream: true, stream_options: { include_usage: true } }, { helper: false })),
   });
   if (!res.ok) throw await apiError(res);
   // 个别服务即使要求流式也会直接返回 JSON
@@ -2138,7 +2168,7 @@ async function chatStream(messages, { onText, onThinking, signal }) {
       if (j.error) throw new Error(j.error.message || '接口返回错误');
       const d = j.choices?.[0]?.delta;
       if (d?.content) { text += d.content; onText && onText(text); }
-      if (d?.reasoning_content) { reasoning += d.reasoning_content; onThinking && onThinking(); }
+      if (d?.reasoning_content) { reasoning += d.reasoning_content; onThinking && onThinking(reasoning.length); }
       if (j.choices?.[0]?.finish_reason) finish = j.choices[0].finish_reason;
       if (j.usage) usage = j.usage;
     }
@@ -2147,7 +2177,9 @@ async function chatStream(messages, { onText, onThinking, signal }) {
   return { text, usage, raw: text };
 }
 function explainEmpty(reasoningLen, finish, leftover) {
-  if (reasoningLen > 0) return `AI 只输出了“思考过程”，没有写出正文${finish === 'length' ? '，输出额度在思考阶段就用完了' : ''}。\n这通常是思考模式没有关掉：请到设置里确认勾选了“关闭思考模式”，并点“测试连接”看看提示；也可以把“单次最多输出 tokens”调大一些。`;
+  if (reasoningLen > 0) return S.thinking === 'enabled'
+    ? `AI 思考了 ${reasoningLen} 字，但还没来得及写正文${finish === 'length' ? '，输出额度就用完了' : '就结束了'}。\n可以直接重试；如果反复出现，到设置里把“单次最多输出 tokens”调大（现在是 ${S.maxTokens}），或者把思考强度调低一档。`
+    : `AI 只输出了“思考过程”，没有写出正文${finish === 'length' ? '，输出额度在思考阶段就用完了' : ''}。\n你选了关闭思考模式，但这个服务似乎没有关掉。可以到设置里把思考模式改成“开启”，或把“单次最多输出 tokens”调大。`;
   if (finish === 'length') return 'AI 还没写出正文就达到了输出上限，请到设置里把“单次最多输出 tokens”调大。';
   if (finish === 'content_filter') return 'AI 的回复被服务商的内容审核拦截了，可以换个说法重试。';
   return 'AI 返回了空内容' + (leftover && leftover.trim() ? '，而且格式无法识别' : '') + '，可以重试。';
@@ -2157,7 +2189,7 @@ async function chatOnce(messages, opts = {}) {
   const res = await fetch(apiUrl(), {
     method: 'POST', signal: opts.signal,
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + S.apiKey },
-    body: JSON.stringify(apiBody({ messages, stream: false, temperature: opts.temperature ?? 0.4, max_tokens: opts.maxTokens ?? 2500 })),
+    body: JSON.stringify(apiBody({ messages, stream: false, temperature: opts.temperature ?? 0.4, max_tokens: opts.maxTokens ?? 2500 }, { helper: opts.helper !== false })),
   });
   if (!res.ok) throw await apiError(res);
   const j = await res.json();
@@ -2363,7 +2395,7 @@ async function playTurn(action) {
   if (!action) return;
   G.busy = true; G.error = null;
   const turn = save.state.turn + 1;
-  G.stream = { action, text: '', thinking: false };
+  G.stream = { action, text: '', thinking: false, rc: 0, t0: Date.now() };
   renderLog(); setComposerBusy(true); scrollLogToEnd(true);
   const messages = [{ role: 'system', content: buildSystemPrompt(save) }, { role: 'user', content: buildUserPrompt(save, action) }];
   G.abort = new AbortController();
@@ -2372,7 +2404,7 @@ async function playTurn(action) {
     result = await chatStream(messages, {
       signal: G.abort.signal,
       onText: t => { G.stream.text = t; G.stream.thinking = false; updateStreamView(); },
-      onThinking: () => { if (!G.stream.thinking) { G.stream.thinking = true; updateStreamView(); } },
+      onThinking: n => { G.stream.thinking = true; G.stream.rc = n; updateStreamView(); },
     });
   } catch (e) {
     const aborted = e.name === 'AbortError';
@@ -2475,13 +2507,13 @@ async function startOpening(save) {
     await persist(save); renderLog(); return;
   }
   // 无开场白：让 AI 写开场，算作第 0 回合
-  G.busy = true; G.error = null; G.stream = { action: '', text: '', thinking: false }; renderLog(); setComposerBusy(true);
+  G.busy = true; G.error = null; G.stream = { action: '', text: '', thinking: false, rc: 0, t0: Date.now() }; renderLog(); setComposerBusy(true);
   G.abort = new AbortController();
   if (!(save.snapshots || []).find(x => x.turn === 0)) pushSnapshot(save, 0); // 留一份开场前的状态，方便重新生成开场
   const guide = save.state.openingGuide ? `\n开场要求：\n${save.state.openingGuide}` : '';
   const messages = [{ role: 'system', content: buildSystemPrompt(save) }, { role: 'user', content: buildUserPrompt(save, `（游戏开始。请写开场：交代主角此刻所处的场景与处境，引出第一个需要玩家做决定的时刻。）${guide}`).replace(/第 1 回合/, '开场') }];
   try {
-    const r = await chatStream(messages, { signal: G.abort.signal, onText: t => { G.stream.text = t; G.stream.thinking = false; updateStreamView(); }, onThinking: () => { if (!G.stream.thinking) { G.stream.thinking = true; updateStreamView(); } } });
+    const r = await chatStream(messages, { signal: G.abort.signal, onText: t => { G.stream.text = t; G.stream.thinking = false; updateStreamView(); }, onThinking: n => { G.stream.thinking = true; G.stream.rc = n; updateStreamView(); } });
     addUsage(save, r.usage);
     const { narrative, delta } = splitOutput(r.text);
     if (!narrative) G.error = { message: 'AI 没有写出开场的正文，可以重试。', action: '__opening__', raw: r.text };
@@ -3116,10 +3148,12 @@ function updateStreamView() {
     n.innerHTML = narrHTML(vis);
     const done = G.stream.text.includes(STATE_MARK);
     const hint = $('#stream-hint-text');
-    if (hint) hint.textContent = G.stream.thinking && !vis ? '正在构思…' : done ? '正在整理人物与事件…' : vis ? '正在书写…' : '等待回应…';
+    const secs = Math.floor((Date.now() - (G.stream.t0 || Date.now())) / 1000);
+    if (hint) hint.textContent = !vis && G.stream.rc ? `AI 正在思考……已经想了 ${G.stream.rc.toLocaleString()} 字 · ${secs} 秒` : done ? '正在整理人物与事件…' : vis ? '正在书写…' : `等待回应… ${secs} 秒`;
     if (nearBottom) scrollLogToEnd();
   });
 }
+setInterval(() => { if (G.stream && !G.stream.text) updateStreamView(); }, 1000); // 等待与思考时刷新计时
 function isNearBottom() { const l = $('#log'); return l.scrollHeight - l.scrollTop - l.clientHeight < 140; }
 function scrollLogToEnd(force) { const l = $('#log'); if (force || isNearBottom()) l.scrollTop = l.scrollHeight; }
 function scrollToEntryStart() {
@@ -3397,23 +3431,70 @@ function renderSettings() {
   const key = input(S.apiKey, { type: 'password', autocomplete: 'off', placeholder: 'sk-…' });
   field('apiKey', 'API 密钥', key, '只保存在这台设备的浏览器里，随请求直接发给上面的接口地址，不经过其他服务器。');
   b.append(h('div', { class: 'row', style: 'margin:-4px 0 12px' }, h('button', { class: 'btn sm ghost', onclick: () => { key.type = key.type === 'password' ? 'text' : 'password'; } }, '显示 / 隐藏密钥')));
-  const model = input(S.model, { list: 'model-list' });
-  b.append(h('datalist', { id: 'model-list' }, h('option', { value: 'deepseek-flash' }), h('option', { value: 'deepseek-v4-pro' })));
-  field('model', '模型', model, 'deepseek-flash 便宜快速，适合日常玩；deepseek-v4-pro 文笔和逻辑更好，价格约贵 4 倍。');
-  const think = h('input', { type: 'checkbox', id: 'set-think' }); think.checked = S.disableThinking;
-  b.append(h('label', { class: 'check', for: 'set-think' }, think, h('span', {}, '关闭思考模式', h('br'), h('span', { class: 'small muted' }, '推荐开着这个选项：回复更快、更省钱。用其他厂商的接口时如果报错，就取消勾选。'))));
+  // 模型：下拉选择 + 从接口拉取列表
+  const modelSel = h('select', { id: 'set-model' });
+  const modelCustom = input(S.model, { id: 'set-model-custom', placeholder: '手动输入模型名' });
+  const modelHint = h('div', { class: 'hint' });
+  const fillModels = () => {
+    modelSel.innerHTML = '';
+    const known = Object.keys(MODEL_INFO).filter(id => isDeepSeek() || S.modelList.includes(id));
+    const rest = S.modelList.filter(id => !known.includes(id));
+    if (known.length) modelSel.append(h('optgroup', { label: '推荐' }, ...known.map(id => h('option', { value: id }, `${MODEL_INFO[id].name}${MODEL_INFO[id].tag ? ' · ' + MODEL_INFO[id].tag : ''}`))));
+    if (rest.length) modelSel.append(h('optgroup', { label: '你的账号可用的其他模型' }, ...rest.map(id => h('option', { value: id }, id))));
+    modelSel.append(h('option', { value: '__custom' }, '手动输入…'));
+    modelSel.value = [...known, ...rest].includes(modelCustom.value) ? modelCustom.value : '__custom';
+    updModel();
+  };
+  const updModel = () => {
+    const id = modelSel.value === '__custom' ? str(modelCustom.value) : modelSel.value;
+    if (modelSel.value !== '__custom') modelCustom.value = id;
+    modelCustom.hidden = modelSel.value !== '__custom';
+    const info = MODEL_INFO[id];
+    modelHint.textContent = info ? `${id}：${info.desc}` : (id ? `${id}：没有这个模型的说明。` : '');
+  };
+  modelSel.onchange = updModel; modelCustom.oninput = updModel;
+  const refreshBtn = h('button', { class: 'btn sm', onclick: async () => {
+    readForm(); if (!S.apiKey) { toast('先填写 API 密钥'); return; }
+    refreshBtn.disabled = true; refreshBtn.textContent = '获取中…';
+    try { S.modelList = await fetchModels(); await saveSettings(); fillModels(); toast(`找到 ${S.modelList.length} 个模型`); }
+    catch (e) { toast('获取失败：' + String(e.message || e).slice(0, 60), 3500); }
+    refreshBtn.disabled = false; refreshBtn.textContent = '获取可用模型';
+  } }, '获取可用模型');
+  fields.model = modelCustom;
+  b.append(h('div', { class: 'field' }, h('label', { for: 'set-model' }, '模型'), h('div', { class: 'row', style: 'flex-wrap:nowrap' }, modelSel, refreshBtn), modelCustom, modelHint));
+  fillModels();
+  // 思考模式
+  const thinkSel = selectEl('set-thinking', [['enabled', '开启（推荐）'], ['disabled', '关闭（更快更省）'], ['default', '不指定（其他服务商用）']], S.thinking || 'enabled');
+  const effortSel = selectEl('set-effort', [['low', '低：想得快'], ['high', '高：推荐'], ['max', '最高：想得最久最细']], S.effort || 'high');
+  fields.thinking = thinkSel; fields.effort = effortSel;
+  b.append(h('div', { class: 'row', style: 'align-items:flex-start' },
+    h('div', { class: 'field grow' }, h('label', { for: 'set-thinking' }, '思考模式'), thinkSel),
+    h('div', { class: 'field grow' }, h('label', { for: 'set-effort' }, '思考强度'), effortSel)));
+  b.append(h('p', { class: 'small muted', style: 'margin:-6px 0 12px;line-height:1.7' }, '开启后，AI 每回合会先想清楚人物动机、伏笔和前后是否矛盾再动笔，剧情明显更好，但每回合要多等十几秒到一分钟。思考过程不会显示出来（里面有剧透）。开局生成、剧情摘要这类辅助任务固定用“低”强度，免得等太久。'));
+  // 一键配置
+  const preset = (label, m, t, e) => h('button', { class: 'btn sm', onclick: () => {
+    modelCustom.value = m; fillModels(); thinkSel.value = t; effortSel.value = e; toast(`已选择：${label}，记得点“保存设置”`);
+  } }, label);
+  b.append(h('div', { class: 'field' }, h('label', {}, '一键配置'), h('div', { class: 'row' },
+    preset('最好玩：V4 Pro + 深度思考', 'deepseek-v4-pro', 'enabled', 'high'),
+    preset('又快又好：Flash + 思考', 'deepseek-flash', 'enabled', 'high'),
+    preset('最省：Flash 不思考', 'deepseek-flash', 'disabled', 'high')),
+    h('div', { class: 'hint' }, '按 DeepSeek 官网价格粗略估算：V4 Pro 开思考，每回合大约一两毛钱；Flash 开思考大约三四分钱；北京时间夜间和周末半价。')));
   field('temperature', '温度（创造性）', input(S.temperature, { type: 'number', step: '0.1', min: '0', max: '2', inputmode: 'decimal' }), '越高越天马行空，越低越稳定。叙事推荐 1.0～1.5。');
-  field('maxTokens', '单次最多输出 tokens', input(S.maxTokens, { type: 'number', inputmode: 'numeric' }), '剧情加状态更新一般用 1500～2500。');
+  field('maxTokens', '单次最多输出 tokens', input(S.maxTokens, { type: 'number', inputmode: 'numeric' }), '这是上限，按实际用量计费。开思考时思考过程也算在里面，建议不低于 32000。');
   b.append(h('div', { class: 'row', style: 'margin-bottom:8px' }, h('button', { class: 'btn', id: 'btn-test', onclick: async () => {
     const btn = $('#btn-test'); readForm(); btn.disabled = true; btn.textContent = '测试中…';
     const t0 = Date.now();
     try {
-      const r = await chatOnce([{ role: 'user', content: '用一句话介绍你自己，不超过二十个字。' }], { maxTokens: 800, temperature: 0.7 });
+      const r = await chatOnce([{ role: 'user', content: '用一句话介绍你自己，不超过二十个字。' }], { maxTokens: 800, temperature: 0.7, helper: true });
       addUsage(null, r.usage); await saveSettings();
       const secs = ((Date.now() - t0) / 1000).toFixed(1);
       openModal({ title: '连接成功', body: h('div', {},
         h('dl', { class: 'kv' }, h('dt', {}, '模型'), h('dd', {}, S.model), h('dt', {}, '回复'), h('dd', {}, str(r.text).slice(0, 80)), h('dt', {}, '用时'), h('dd', {}, secs + ' 秒')),
-        r.reasoning ? h('p', { class: 'warn-line', style: 'line-height:1.7' }, S.disableThinking ? '注意：虽然勾选了“关闭思考模式”，这次回复仍然带有思考过程。这个服务可能不支持关闭思考，游戏会慢一些、也更费额度，建议把“单次最多输出 tokens”保持在 8000 以上。' : '这次回复带有思考过程（思考模式开着）。游戏会慢一些，也更费额度。') : h('p', { class: 'small muted' }, '没有思考过程，一切正常。')) });
+        h('p', { class: S.thinking === 'disabled' && r.reasoning ? 'warn-line' : 'small muted', style: 'line-height:1.7' },
+          S.thinking === 'enabled' ? (r.reasoning ? `思考模式正常工作（这次想了 ${r.reasoning.length} 字）。` : '思考模式已开启，但这次回复没有带思考过程：这个模型可能不支持思考，游戏照样能玩。')
+            : S.thinking === 'disabled' ? (r.reasoning ? '注意：你选了关闭思考，这次回复仍然带有思考过程，说明这个服务关不掉它。游戏照样能玩，只是会慢一些。' : '思考模式已关闭。')
+              : (r.reasoning ? '这次回复带有思考过程。' : '这次回复没有思考过程。'))) });
     } catch (e) { openModal({ title: '连接失败', body: h('p', { style: 'white-space:pre-wrap' }, e.message || String(e)) }); }
     btn.disabled = false; btn.textContent = '测试连接';
   } }, '测试连接')));
@@ -3496,9 +3577,10 @@ function renderSettings() {
     S.baseUrl = str(fields.baseUrl.value) || DEFAULT_SETTINGS.baseUrl;
     S.apiKey = str(fields.apiKey.value);
     S.model = str(fields.model.value) || DEFAULT_SETTINGS.model;
-    S.disableThinking = think.checked;
+    S.thinking = fields.thinking.value;
+    S.effort = fields.effort.value;
     S.temperature = clamp(num(fields.temperature.value, 1.3), 0, 2);
-    S.maxTokens = clamp(Math.round(num(fields.maxTokens.value, 3000)), 500, 16000);
+    S.maxTokens = clamp(Math.round(num(fields.maxTokens.value, 32000)), 500, 384000);
     S.length = fields.length.value;
     S.pace = fields.pace.value;
     S.defaultProfile = fields.defaultProfile.value;

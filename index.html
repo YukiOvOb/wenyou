@@ -207,6 +207,8 @@ details.fold summary{cursor:pointer;color:var(--muted);font-size:13.5px}
 .roll-item .desc{font-size:13px;color:var(--muted);line-height:1.65;margin-top:5px}
 .roll-item .lbl{font-size:13px;color:var(--muted);margin-bottom:5px}
 .unmet{margin-top:14px}
+.dice.ai{color:var(--rose)}
+.dice:disabled{opacity:.5}
 
 /* 方案与文风 */
 .opt-card{display:flex;gap:10px;align-items:flex-start}
@@ -380,13 +382,15 @@ const DEFAULT_SETTINGS = {
   model: 'deepseek-flash',
   disableThinking: true,
   temperature: 1.3,
-  maxTokens: 3000,
+  maxTokens: 8000,
   length: 'mid',          // 新游戏默认篇幅 short | mid | long
   pace: 'normal',         // 新游戏默认节奏 slow | normal | fast
   prefs: null,            // 基础偏好，见 DEFAULT_PREFS
   profiles: null,         // 故事口味方案，见 DEFAULT_PROFILES
   defaultProfile: 'p-ensemble',
   customStyles: [],       // 我的文风库 [{id,name,text}]
+  genHistory: [],         // 最近 AI 生成过的主角，用来避免重复
+  scriptPrefs: {},        // 剧本设置 {剧本id: {length, pace, profileId, style, useGlobalPrefs}}
   recentTurns: 3,       // 原文保留回合数
   summaryInterval: 3,     // 每累积多少回合压缩一次
   memoryMaxChars: 1500,   // 剧情摘要上限
@@ -404,7 +408,10 @@ async function loadSettings() {
   S.prefs = Object.assign(clone(DEFAULT_PREFS), S.prefs || {});
   if (!Array.isArray(S.profiles) || !S.profiles.length) S.profiles = clone(DEFAULT_PROFILES);
   if (!Array.isArray(S.customStyles)) S.customStyles = [];
-  if (!S.profiles.find(p => p.id === S.defaultProfile)) S.defaultProfile = S.profiles[0].id;
+  if (!S.scriptPrefs || typeof S.scriptPrefs !== 'object') S.scriptPrefs = {};
+  if (!S.aiOptions || typeof S.aiOptions !== 'object') S.aiOptions = {};
+  if (S.maxTokens === 3000) S.maxTokens = 8000; // 旧默认值太小，思考模式下会被思考过程用光
+  if (S.defaultProfile !== 'none' && !S.profiles.find(p => p.id === S.defaultProfile)) S.defaultProfile = S.profiles[0].id;
   applyTheme();
 }
 async function saveSettings() { await DB.put('kv', { id: 'settings', value: S }); applyTheme(); }
@@ -423,8 +430,8 @@ const PACE_TEXT = {
   fast: '快节奏：推进一段完整的剧情，可以跳过无关紧要的过渡、切换场景，故事内时间可以过去数小时到数天（用一两句话带过）。但遇到重要人物的抉择、冲突爆发或需要玩家表态的时刻，必须停下交给玩家。',
 };
 const LENGTH_HOW = { short: '篇幅简短，只写最关键的动作与对白', mid: '篇幅适中', long: '篇幅充裕，可以展开神态、动作、环境与对白中的停顿和潜台词' };
-function paceBlock(st) {
-  const L = st.length || S.length, P = st.pace || S.pace;
+function paceBlock(save) {
+  const L = effLength(save), P = effPace(save);
   return `【本回合的篇幅与节奏】（这是两个独立的要求，不要混为一谈）
 篇幅：正文约 ${LENGTH_TEXT[L]}。篇幅只决定“写得多细”。
 节奏：${PACE_TEXT[P]} 节奏只决定“剧情推进多远”。
@@ -448,7 +455,7 @@ function styleOptions(script) {
   return out;
 }
 function resolveStyle(save) {
-  const st = save.state; const sel = st.style;
+  const sel = scriptPrefsOf(save.scriptId, save.script).style;
   if (!sel || !sel.id || sel.id === 'none') return null;
   const live = styleOptions(save.script).find(o => o.id === sel.id);
   return live || (sel.text ? sel : null);
@@ -547,9 +554,86 @@ function profileSummary(p) {
   return `${f || ''} · 权谋${i || ''}${r ? ' · ' + r : ''}`;
 }
 function resolveProfile(save) {
-  const st = save.state;
-  if (!st.profileId || st.profileId === 'none') return null;
-  return S.profiles.find(p => p.id === st.profileId) || st.profileSnapshot || null;
+  const pr = scriptPrefsOf(save.scriptId, save.script);
+  const id = !pr.profileId || pr.profileId === 'inherit' ? S.defaultProfile : pr.profileId;
+  if (!id || id === 'none') return null;
+  return S.profiles.find(p => p.id === id) || null;
+}
+
+/* ---------------- 剧本设置（每个剧本各自保存，该剧本的所有存档共用） ---------------- */
+function defaultScriptPrefs(script) {
+  return {
+    length: ['short', 'mid', 'long'].includes(script?.length) ? script.length : 'inherit',
+    pace: ['slow', 'normal', 'fast'].includes(script?.pace) ? script.pace : 'inherit',
+    profileId: script?.defaultProfile && S.profiles.find(p => p.id === script.defaultProfile) ? script.defaultProfile : 'inherit',
+    style: script && str(script.style) ? { id: 'script', name: '剧本默认文风', text: str(script.style) } : null,
+    useGlobalPrefs: true,
+  };
+}
+function scriptPrefsOf(scriptId, script) {
+  return Object.assign(defaultScriptPrefs(script), (S.scriptPrefs || {})[scriptId] || {});
+}
+async function setScriptPrefs(scriptId, prefs) { S.scriptPrefs[scriptId] = clone(prefs); await saveSettings(); }
+const effLength = save => { const v = scriptPrefsOf(save.scriptId, save.script).length; return v && v !== 'inherit' ? v : S.length; };
+const effPace = save => { const v = scriptPrefsOf(save.scriptId, save.script).pace; return v && v !== 'inherit' ? v : S.pace; };
+const usesGlobalPrefs = save => scriptPrefsOf(save.scriptId, save.script).useGlobalPrefs !== false;
+const LENGTH_OPTS = [['short', '短（300～500 字）'], ['mid', '中（600～900 字）'], ['long', '长（1000～1500 字）']];
+const PACE_OPTS = [['slow', '慢（一回合一小步，细写当下）'], ['normal', '中（一回合一两步）'], ['fast', '快（一回合一整段，略写过渡）']];
+function scriptPrefsSummary(script) {
+  const pr = scriptPrefsOf(script.id, script);
+  const fake = { scriptId: script.id, script, state: {} };
+  const L = LENGTH_LABEL[effLength(fake)], P = PACE_LABEL[effPace(fake)], prof = resolveProfile(fake), sty = resolveStyle(fake);
+  return `篇幅${L} · 节奏${P} · ${prof ? prof.name : '无口味方案'} · ${sty ? sty.name : '不指定文风'}${pr.useGlobalPrefs === false ? ' · 不用基础偏好' : ''}`;
+}
+/* 剧本设置控件：prefix 用于元素 id；onChange(prefs) 在每次修改后调用；opts.allowEdit 显示“编辑/新建方案”等按钮 */
+function scriptPrefsControls(script, prefs, onChange, prefix, opts = {}) {
+  const wrap = h('div', {});
+  const gLen = LENGTH_LABEL[S.length], gPace = PACE_LABEL[S.pace];
+  const gProf = S.profiles.find(p => p.id === S.defaultProfile);
+  const fire = () => onChange(prefs);
+  // 篇幅 / 节奏
+  const lenSel = selectEl(prefix + '-length', [['inherit', `跟随全局默认（${gLen}）`], ...LENGTH_OPTS], prefs.length || 'inherit');
+  const paceSel = selectEl(prefix + '-pace', [['inherit', `跟随全局默认（${gPace}）`], ...PACE_OPTS], prefs.pace || 'inherit');
+  lenSel.onchange = () => { prefs.length = lenSel.value; fire(); };
+  paceSel.onchange = () => { prefs.pace = paceSel.value; fire(); };
+  wrap.append(h('div', { class: 'row', style: 'align-items:flex-start' },
+    h('div', { class: 'field grow' }, h('label', { for: prefix + '-length' }, '每回合篇幅（写多细）'), lenSel),
+    h('div', { class: 'field grow' }, h('label', { for: prefix + '-pace' }, '推进节奏（推多远）'), paceSel)));
+  // 口味
+  const profSel = selectEl(prefix + '-profile', [['inherit', `跟随全局默认（${gProf ? gProf.name : '不使用'}）`], ...S.profiles.map(p => [p.id, p.name]), ['none', '不使用口味方案']], prefs.profileId && (prefs.profileId === 'inherit' || prefs.profileId === 'none' || S.profiles.find(p => p.id === prefs.profileId)) ? prefs.profileId : 'inherit');
+  const profHint = h('div', { class: 'hint' });
+  const updProf = () => { const id = profSel.value === 'inherit' ? S.defaultProfile : profSel.value; const p = S.profiles.find(x => x.id === id); profHint.textContent = p ? profileSummary(p) + (p.extra ? '。' + p.extra : '') : '只按剧本自身的设定走。'; };
+  profSel.onchange = () => { prefs.profileId = profSel.value; updProf(); fire(); };
+  updProf();
+  wrap.append(h('div', { class: 'field' }, h('label', { for: prefix + '-profile' }, '故事口味'), profSel, profHint));
+  if (opts.allowEdit) wrap.append(h('div', { class: 'row', style: 'margin:-4px 0 12px' },
+    h('button', { class: 'btn sm', onclick: async () => { const id = profSel.value === 'inherit' ? S.defaultProfile : profSel.value; const p = S.profiles.find(x => x.id === id); if (!p) { toast('先选一套方案'); return; } await profileEditor(p); opts.rerender && opts.rerender(); } }, '编辑这套方案'),
+    h('button', { class: 'btn sm', onclick: async () => { const r = await profileEditor(null); if (r && r !== 'deleted') { prefs.profileId = r.id; fire(); } opts.rerender && opts.rerender(); } }, '新建方案')));
+  // 文风
+  const styles = styleOptions(script);
+  const curId = prefs.style?.id || 'none';
+  const sOpts = styles.map(o => [o.id, o.name]);
+  if (prefs.style && !styles.find(o => o.id === prefs.style.id)) sOpts.unshift([prefs.style.id, prefs.style.name + '（已删除的文风副本）']);
+  const stySel = selectEl(prefix + '-style', sOpts, curId);
+  const styHint = h('div', { class: 'hint' });
+  const updSty = () => { const o = styles.find(x => x.id === stySel.value) || (prefs.style?.id === stySel.value ? prefs.style : null); styHint.textContent = o?.text ? o.text.slice(0, 90) + (o.text.length > 90 ? '…' : '') : ''; };
+  stySel.onchange = () => { const o = styles.find(x => x.id === stySel.value); prefs.style = o ? (o.id === 'none' ? null : { id: o.id, name: o.name, text: o.text }) : prefs.style; updSty(); fire(); };
+  updSty();
+  wrap.append(h('div', { class: 'field' }, h('label', { for: prefix + '-style' }, '文风'), stySel, styHint));
+  if (opts.allowEdit) wrap.append(h('div', { class: 'row', style: 'margin:-4px 0 12px' }, h('button', { class: 'btn sm', onclick: async () => { const r = await styleEditor(null); if (r) { prefs.style = { id: 'custom:' + r.id, name: r.name, text: r.text }; fire(); } opts.rerender && opts.rerender(); } }, '新建自定义文风')));
+  // 基础偏好
+  const gp = h('input', { type: 'checkbox', id: prefix + '-gp' }); gp.checked = prefs.useGlobalPrefs !== false;
+  gp.onchange = () => { prefs.useGlobalPrefs = gp.checked; fire(); };
+  wrap.append(h('label', { class: 'check', for: prefix + '-gp' }, gp, h('span', {}, '使用我的基础偏好', h('small', { class: 'muted', style: 'display:block' }, PREF_RULES.filter(r => S.prefs[r.key]).map(r => r.label).join('、') + (str(S.prefs.extra) ? '，以及自定义偏好' : '') || '（设置里没有开启任何基础偏好）'))));
+  return wrap;
+}
+async function scriptPrefsModal(script) {
+  const prefs = scriptPrefsOf(script.id, script);
+  const body = h('div', {}, h('p', { class: 'small muted', style: 'margin:0 0 12px;line-height:1.7' }, `这些设置属于《${script.title}》，它的所有存档共用。选“跟随全局默认”的项，会使用设置页里的全局默认值。`),
+    scriptPrefsControls(script, prefs, () => {}, 'sp'));
+  const v = await openModal({ title: '剧本设置', body, actions: [{ label: '取消', value: null, ghost: true }, { label: '保存', value: 'ok', primary: true }] });
+  if (v === 'ok') { await setScriptPrefs(script.id, prefs); toast('剧本设置已保存'); return true; }
+  return false;
 }
 
 /* ---------------- 内置剧本 ---------------- */
@@ -706,6 +790,8 @@ const BUILTIN_SCRIPTS = [
    "唐棠"
   ],
   "backgroundGuide": "主角是与武魂殿渊源很深的年轻女魂师。身世里要写出她与武魂殿之间真实的感情（感激、忠诚或复杂），以及她在殿内所处的位置。不要让她在开局之前就认识史莱克七怪；除非起点是武魂殿学院，否则也不要让她与黄金一代有深交。",
+  "ai": true,
+  "aiGuide": "主角是女性，十八到二十岁，与武魂殿有真实的渊源。所有设定都要贴合《斗罗大陆》的世界观和实力体系，写得具体、有生活气，不要写成套路化的天才少女。开局时她还没有与史莱克七怪深交，与黄金一代、千仞雪等人是否相识由“起点”决定。",
   "fields": [
    {
     "key": "origin",
@@ -914,7 +1000,8 @@ const BUILTIN_SCRIPTS = [
        }
       ]
      }
-    ]
+    ],
+    "aiHint": "出身必须与武魂殿有真实的渊源，可以是受惠的平民、殿内职工的家庭、殉职者的遗孤、高层家族、被武魂殿救下的人，或者你想到的其他关系。stats 给出 origin（出身，一句话）、standing（殿内声望，平民低、高层家族高）、coins（金魂币）。可以附带 1 个与出身相关的原创人物（家人、恩人、监护人……），他的名字可以用 {姓} 代表主角的姓。"
    },
    {
     "key": "start",
@@ -1020,7 +1107,8 @@ const BUILTIN_SCRIPTS = [
       ],
       "opening": "从主角第一次奉命去太子府送一份武魂殿文书写起。太子雪清河（千仞雪假扮）温文有礼，却对武魂殿派来的人格外留意。可以埋下一个细节，让主角隐约觉得太子和传闻里不太一样，但不要揭穿。"
      }
-    ]
+    ],
+    "aiHint": "起点是原著故事开始时（唐三与小舞刚到索托城）主角所在的地方和身份：可以是索托城、武魂城、天斗城，也可以是诺丁城、某个行省的分殿、星罗城、边境要塞等你想到的地方，但要能在不久之后与原著人物产生交集。stats 给出 identity（身份）、age（十八到二十岁）；给出 stage 与 opening；overrides 写主角开局时已经认识的原著人物（通常 0～2 人）；可以附带 1 个原创人物（上司、同僚、室友……）和 1 个开局目标。"
    },
    {
     "key": "wuhun",
@@ -1116,7 +1204,8 @@ const BUILTIN_SCRIPTS = [
        "skills": "星辰罗盘：第一魂技【寻踪】感知周围魂师与魂兽；第二魂技【星引】标记目标；第三魂技【逆转星轨】预判对手动作（只能使用与魂环数相同数量的魂技）。夜冥蝶：尚未附加魂环，偶尔会在梦中自行苏醒。"
       }
      }
-    ]
+    ],
+    "aiHint": "武魂必须是原创的，不能是原著中已有的武魂（如蓝银草、昊天锤、七宝琉璃塔、蓝电霸王龙、邪眸白虎、幽冥灵猫、柔骨兔、妖狐、月刃、火焰领主、九心海棠、碧磷蛇、天使、死亡蛛皇等）。stats 给出 wuhun（名称、类型：兽 / 器 / 植物武魂，以及定位：强攻 / 敏攻 / 控制 / 辅助 / 治疗 / 食物 / 防御）和 skills（第一到第三魂技，每个一句话，末尾注明“只能使用与魂环数相同数量的魂技”）。desc 里写出这个武魂的样子和气质。双生武魂极其罕见，除非玩家要求，不要生成。"
    },
    {
     "key": "talent",
@@ -1168,7 +1257,8 @@ const BUILTIN_SCRIPTS = [
        "rings": "二环：白（十年）· 黄（百年）"
       }
      }
-    ]
+    ],
+    "aiHint": "stats 给出 level（魂力等级，20～33）与 rings（魂环）。魂环数量 = 等级除以十取整（20～29 级两个，30～33 级三个；卡在 29 或 30 级说明正需要下一个魂环）；年限要合理，第一魂环一般不超过四百年，天赋越好魂环年限越高；与当前武魂的魂技对应。先天满魂力极其罕见。可以附带 1 个与天赋有关的开局目标。"
    }
   ]
  },
@@ -1752,6 +1842,7 @@ function normalizeScript(raw) {
   s.openingChoices = Array.isArray(s.openingChoices) ? s.openingChoices.map(str).filter(Boolean) : [];
   s.opening = str(s.opening); s.stage = str(s.stage); s.openingGuide = str(s.openingGuide);
   if (s.creation && typeof s.creation === 'object') {
+    s.creation.ai = !!s.creation.ai; s.creation.aiGuide = str(s.creation.aiGuide);
     s.creation.names = Array.isArray(s.creation.names) ? s.creation.names.map(str).filter(Boolean) : [];
     s.creation.fields = creationFields(s).map(f => ({ ...f, options: f.options.filter(o => o && str(o.id) && str(o.label)) }));
   } else delete s.creation;
@@ -1788,9 +1879,9 @@ function newSave(script, statValues, persona, saveName, opts = {}) {
   let chars = clone(script.characters), items = clone(script.items), objs = clone(script.objectives), stage = script.stage || '';
   const overrides = {}, openings = [], picked = [];
   for (const f of creationFields(script)) {
-    const o0 = f.options.find(x => x.id === (opts.picks || {})[f.key]); if (!o0) continue;
+    const o0 = (opts.options || {})[f.key] || f.options.find(x => x.id === (opts.picks || {})[f.key]); if (!o0) continue;
     const o = deepFill(o0, name);
-    picked.push({ field: f.label, label: o.label });
+    picked.push({ field: f.label, label: o.label.replace(/^✨\s*/, '') });
     for (const [k, v] of Object.entries(o.stats || {})) { const def = script.stats.find(x => x.key === k); if (def) stats[k] = def.type === 'number' ? num(v) : str(v); }
     for (const [k, v] of Object.entries(o.statsAdd || {})) stats[k] = num(stats[k]) + num(v);
     chars.push(...(o.characters || [])); items.push(...(o.items || [])); objs.push(...(o.objectives || []));
@@ -1810,12 +1901,7 @@ function newSave(script, statValues, persona, saveName, opts = {}) {
     events: [], objectives: objs.map(o => ({ id: uid(), title: str(o.title), description: str(o.description), status: o.status || 'active', progress: clamp(num(o.progress, 0), 0, 100), turn: 0 })),
     items: items.map(i => ({ name: str(i.name), desc: str(i.desc), count: Math.max(1, num(i.count, 1)) })),
     memory: '', summarizedUpTo: -1, playInstruction: '',
-    length: opts.length || S.length, pace: opts.pace || S.pace,
-    style: opts.style || null,                       // {id,name,text}
-    profileId: opts.profileId || S.defaultProfile,   // 故事口味方案
-    profileSnapshot: null, useGlobalPrefs: opts.useGlobalPrefs !== false,
   };
-  const pf = S.profiles.find(p => p.id === state.profileId); if (pf) state.profileSnapshot = clone(pf);
   return {
     id: 'save-' + uid(), v: APP_VERSION, scriptId: script.id, script: clone(script),
     name: saveName || `${script.title} · ${stats.name || '无名'}`,
@@ -1825,10 +1911,19 @@ function newSave(script, statValues, persona, saveName, opts = {}) {
 }
 function migrateSave(save) {
   const st = save.state;
-  st.length = st.length || S.length; st.pace = st.pace || S.pace;
-  if (st.useGlobalPrefs === undefined) st.useGlobalPrefs = true;
-  if (st.profileId === undefined) st.profileId = S.defaultProfile;
-  if (st.style === undefined) st.style = save.script.style ? { id: 'script', name: '剧本默认文风', text: save.script.style } : null;
+  // 旧版本把篇幅、节奏、口味、文风存在存档里；现在它们属于剧本设置
+  if ('length' in st || 'pace' in st || 'profileId' in st || 'style' in st || 'useGlobalPrefs' in st) {
+    if (!S.scriptPrefs[save.scriptId]) {
+      const pr = defaultScriptPrefs(save.script);
+      if (st.length) pr.length = st.length;
+      if (st.pace) pr.pace = st.pace;
+      if (st.profileId && (st.profileId === 'none' || S.profiles.find(p => p.id === st.profileId))) pr.profileId = st.profileId;
+      if (st.style !== undefined) pr.style = st.style;
+      if (st.useGlobalPrefs === false) pr.useGlobalPrefs = false;
+      S.scriptPrefs[save.scriptId] = pr; G.migrated = true;
+    }
+    for (const k of ['length', 'pace', 'profileId', 'profileSnapshot', 'style', 'useGlobalPrefs']) delete st[k];
+  }
   for (const c of st.characters) { c.traits = c.traits || []; c.motive = c.motive || ''; c.backstory = c.backstory || ''; c.secret = c.secret || ''; if (c.met === undefined) c.met = true; }
   st.timeline = st.timeline || {}; st.butterflies = st.butterflies || []; st.background = st.background || '';
   return save;
@@ -1841,7 +1936,7 @@ const IMPORTANCE_ORDER = { major: 0, supporting: 1, minor: 2 };
 const IMPORTANCE_TEXT = { major: '主要', supporting: '次要', minor: '路人' };
 
 function globalPrefsText(save) {
-  if (save.state.useGlobalPrefs === false) return '';
+  if (!usesGlobalPrefs(save)) return '';
   const P = S.prefs || DEFAULT_PREFS;
   const lines = PREF_RULES.filter(r => P[r.key]).map(r => '- ' + r.text);
   if (str(P.extra)) lines.push('- ' + str(P.extra));
@@ -1987,7 +2082,7 @@ function buildUserPrompt(save, action) {
   if (turns.length) parts.push(`【最近的剧情原文】\n${turns.map(e => `〔第${e.turn}回合〕${e.action ? `\n玩家行动：${e.action}` : ''}\n${e.narrative}`).join('\n\n')}`);
   if (st.playInstruction) parts.push(`【玩家对接下来剧情的额外要求】\n${st.playInstruction}`);
   parts.push(`【本回合玩家行动】\n${action}`);
-  parts.push(paceBlock(st) + `\n\n请续写本回合剧情，然后另起一行输出 ${STATE_MARK} 和状态 JSON。`);
+  parts.push(paceBlock(save) + `\n\n请续写本回合剧情，然后另起一行输出 ${STATE_MARK} 和状态 JSON。`);
   return parts.join('\n\n');
 }
 
@@ -2019,8 +2114,16 @@ async function chatStream(messages, { onText, onThinking, signal }) {
     body: JSON.stringify(apiBody({ messages, stream: true, stream_options: { include_usage: true } })),
   });
   if (!res.ok) throw await apiError(res);
+  // 个别服务即使要求流式也会直接返回 JSON
+  if ((res.headers.get('content-type') || '').includes('application/json')) {
+    const j = await res.json();
+    const m = j.choices?.[0]?.message || {};
+    if (!str(m.content)) throw new Error(explainEmpty(str(m.reasoning_content).length, j.choices?.[0]?.finish_reason, ''));
+    onText && onText(m.content);
+    return { text: m.content, usage: j.usage, raw: m.content };
+  }
   const reader = res.body.getReader(), dec = new TextDecoder();
-  let buf = '', text = '', usage = null;
+  let buf = '', text = '', usage = null, reasoning = '', finish = null;
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -2035,11 +2138,19 @@ async function chatStream(messages, { onText, onThinking, signal }) {
       if (j.error) throw new Error(j.error.message || '接口返回错误');
       const d = j.choices?.[0]?.delta;
       if (d?.content) { text += d.content; onText && onText(text); }
-      else if (d?.reasoning_content) onThinking && onThinking();
+      if (d?.reasoning_content) { reasoning += d.reasoning_content; onThinking && onThinking(); }
+      if (j.choices?.[0]?.finish_reason) finish = j.choices[0].finish_reason;
       if (j.usage) usage = j.usage;
     }
   }
-  return { text, usage };
+  if (!text.trim()) { const e = new Error(explainEmpty(reasoning.length, finish, buf)); e.raw = reasoning ? '（思考过程）\n' + reasoning.slice(-3000) : buf.slice(0, 3000); throw e; }
+  return { text, usage, raw: text };
+}
+function explainEmpty(reasoningLen, finish, leftover) {
+  if (reasoningLen > 0) return `AI 只输出了“思考过程”，没有写出正文${finish === 'length' ? '，输出额度在思考阶段就用完了' : ''}。\n这通常是思考模式没有关掉：请到设置里确认勾选了“关闭思考模式”，并点“测试连接”看看提示；也可以把“单次最多输出 tokens”调大一些。`;
+  if (finish === 'length') return 'AI 还没写出正文就达到了输出上限，请到设置里把“单次最多输出 tokens”调大。';
+  if (finish === 'content_filter') return 'AI 的回复被服务商的内容审核拦截了，可以换个说法重试。';
+  return 'AI 返回了空内容' + (leftover && leftover.trim() ? '，而且格式无法识别' : '') + '，可以重试。';
 }
 async function chatOnce(messages, opts = {}) {
   if (!S.apiKey) throw new Error('还没有填写 API 密钥。');
@@ -2050,7 +2161,9 @@ async function chatOnce(messages, opts = {}) {
   });
   if (!res.ok) throw await apiError(res);
   const j = await res.json();
-  return { text: j.choices?.[0]?.message?.content || '', usage: j.usage };
+  const m = j.choices?.[0]?.message || {};
+  if (!str(m.content)) throw new Error(explainEmpty(str(m.reasoning_content).length, j.choices?.[0]?.finish_reason, ''));
+  return { text: m.content, usage: j.usage, reasoning: str(m.reasoning_content) };
 }
 
 /* ---------------- 解析与合并 ---------------- */
@@ -2270,7 +2383,7 @@ async function playTurn(action) {
       $('#action').value = action;
       toast(partial ? '已停止，本回合没有保存' : '已停止');
     } else {
-      G.error = { message: e.message || String(e), action };
+      G.error = { message: e.message || String(e), action, raw: e.raw };
     }
     renderLog(); setComposerBusy(false); scrollLogToEnd();
     return;
@@ -2278,7 +2391,7 @@ async function playTurn(action) {
   addUsage(save, result.usage);
   const { narrative, delta, hadMark } = splitOutput(result.text);
   if (!narrative) {
-    G.busy = false; G.stream = null; G.error = { message: 'AI 没有返回剧情内容，可以重试。', action };
+    G.busy = false; G.stream = null; G.error = { message: 'AI 没有写出剧情正文，可以重试。', action, raw: result.text };
     renderLog(); setComposerBusy(false); await saveSettings(); return;
   }
   pushSnapshot(save, turn);
@@ -2287,7 +2400,7 @@ async function playTurn(action) {
   if (!delta) warns.push(hadMark ? '状态更新的格式有误，本回合属性和人物没有变化。' : 'AI 没有按格式返回状态更新，本回合属性和人物没有变化。');
   const choices = Array.isArray(delta?.choices) ? delta.choices.map(str).filter(Boolean).slice(0, 5) : [];
   save.state.turn = turn;
-  save.log.push({ id: uid(), turn, action, narrative, choices, chips, warns, at: Date.now() });
+  save.log.push({ id: uid(), turn, action, narrative, choices, chips, warns, at: Date.now(), ...(delta ? {} : { raw: result.text.slice(-4000) }) });
   G.busy = false; G.stream = null; G.abort = null;
   await persist(save); await saveSettings();
   renderLog(); renderGameHeader(); setComposerBusy(false); scrollToEntryStart();
@@ -2362,24 +2475,38 @@ async function startOpening(save) {
     await persist(save); renderLog(); return;
   }
   // 无开场白：让 AI 写开场，算作第 0 回合
-  G.busy = true; G.stream = { action: '', text: '', thinking: false }; renderLog(); setComposerBusy(true);
+  G.busy = true; G.error = null; G.stream = { action: '', text: '', thinking: false }; renderLog(); setComposerBusy(true);
   G.abort = new AbortController();
+  if (!(save.snapshots || []).find(x => x.turn === 0)) pushSnapshot(save, 0); // 留一份开场前的状态，方便重新生成开场
   const guide = save.state.openingGuide ? `\n开场要求：\n${save.state.openingGuide}` : '';
   const messages = [{ role: 'system', content: buildSystemPrompt(save) }, { role: 'user', content: buildUserPrompt(save, `（游戏开始。请写开场：交代主角此刻所处的场景与处境，引出第一个需要玩家做决定的时刻。）${guide}`).replace(/第 1 回合/, '开场') }];
   try {
-    const r = await chatStream(messages, { signal: G.abort.signal, onText: t => { G.stream.text = t; updateStreamView(); }, onThinking: () => {} });
+    const r = await chatStream(messages, { signal: G.abort.signal, onText: t => { G.stream.text = t; G.stream.thinking = false; updateStreamView(); }, onThinking: () => { if (!G.stream.thinking) { G.stream.thinking = true; updateStreamView(); } } });
     addUsage(save, r.usage);
     const { narrative, delta } = splitOutput(r.text);
-    const chips = applyDelta(save, delta, 0);
-    save.log.push({ id: uid(), turn: 0, action: '', narrative, choices: (delta?.choices || []).map(str).filter(Boolean), chips, warns: delta ? [] : ['开场没有返回状态更新。'], at: Date.now() });
+    if (!narrative) G.error = { message: 'AI 没有写出开场的正文，可以重试。', action: '__opening__', raw: r.text };
+    else {
+      const chips = applyDelta(save, delta, 0);
+      save.log.push({ id: uid(), turn: 0, action: '', narrative, choices: (delta?.choices || []).map(str).filter(Boolean), chips, warns: delta ? [] : ['开场没有返回状态更新，人物和属性保持开局设定。'], at: Date.now(), ...(delta ? {} : { raw: r.text.slice(-4000) }) });
+    }
     await persist(save); await saveSettings();
   } catch (e) {
-    if (e.name !== 'AbortError') G.error = { message: e.message, action: '__opening__' };
+    if (e.name !== 'AbortError') G.error = { message: e.message || String(e), action: '__opening__', raw: e.raw };
   }
   G.busy = false; G.stream = null; G.abort = null; renderLog(); setComposerBusy(false); renderGameHeader();
 }
+async function regenOpening() {
+  const save = G.save; if (!save || G.busy) return;
+  const snap = (save.snapshots || []).find(x => x.turn === 0);
+  if (!snap) { toast('找不到开场前的状态，无法重新生成'); return; }
+  const keep = {}; for (const k of PLAY_KEYS) keep[k] = save.state[k];
+  save.state = Object.assign(clone(snap.state), keep);
+  save.log = []; save.snapshots = [snap]; G.error = null;
+  await persist(save); renderLog(); renderGameHeader();
+  await startOpening(save);
+}
 
-const PLAY_KEYS = ['length', 'pace', 'style', 'profileId', 'profileSnapshot', 'useGlobalPrefs', 'persona', 'background', 'playInstruction'];
+const PLAY_KEYS = ['persona', 'background', 'playInstruction']; // 不随剧情回退的本局设定
 async function rollback(silent) { return rewindTo(G.save?.state.turn, silent); }
 /* 回到第 turn 回合之前（撤销该回合及之后的所有回合），返回被撤销的那一回合 */
 async function rewindTo(turn, silent) {
@@ -2542,9 +2669,10 @@ async function profileEditor(existing) {
     { key: 'extra', label: '补充说明', type: 'textarea', rows: 4, placeholder: '用自己的话说说你想要什么样的故事，比如“最终目的就是让主角和男主们恨海情天”。' },
   ], base, { extra: existing && S.profiles.length > 1 ? [{ label: '删除', danger: true, value: 'del' }] : [] });
   if (r === 'del') {
-    if (!(await ask('删除方案', `删除「${existing.name}」？正在用它的存档会保留一份副本继续使用。`, '删除', true))) return null;
+    if (!(await ask('删除方案', `删除「${existing.name}」？正在用它的剧本会改回“跟随全局默认”。`, '删除', true))) return null;
     S.profiles = S.profiles.filter(p => p.id !== existing.id);
     if (S.defaultProfile === existing.id) S.defaultProfile = S.profiles[0].id;
+    for (const pr of Object.values(S.scriptPrefs || {})) if (pr.profileId === existing.id) pr.profileId = 'inherit';
     await saveSettings(); return 'deleted';
   }
   if (!r || !str(r.name)) return null;
@@ -2579,8 +2707,10 @@ async function renderShelf() {
       h('h3', {}, sc.title),
       h('div', { class: 'tags' }, ...(sc.tags || []).map(t => h('span', { class: 'tag' }, t)), sc.builtin ? h('span', { class: 'tag' }, '内置') : null),
       h('p', {}, sc.intro || ''),
+      h('div', { class: 'small muted', style: 'margin:-4px 0 10px' }, scriptPrefsSummary(sc)),
       h('div', { class: 'row' },
         h('button', { class: 'btn primary sm', onclick: () => openSetup(sc.id) }, '开始新游戏'),
+        h('button', { class: 'btn sm', onclick: async () => { if (await scriptPrefsModal(sc)) renderShelf(); } }, '剧本设置'),
         h('button', { class: 'btn sm', onclick: () => editScript(sc) }, '编辑'),
         h('button', { class: 'btn sm ghost', onclick: () => download(`剧本-${sc.title}.json`, JSON.stringify(stripScript(sc), null, 2)) }, '导出'),
         sc.builtin ? null : h('button', { class: 'btn sm ghost danger', onclick: async () => { if (await ask('删除剧本', `删除「${sc.title}」？已有的存档不受影响。`, '删除', true)) { await DB.del('scripts', sc.id); renderShelf(); } } }, '删除'))));
@@ -2640,86 +2770,102 @@ async function openSetup(scriptId) {
   const inputs = {};
   const creation = script.creation || null;
   const names = creation?.names || [];
+  const fields = creationFields(script);
+  const aiOn = !!(creation && creation.ai);
+  const aiOpts = aiOptionsOf(script.id);
+  const picks = {}, rollEls = {};
+  const optionOf = f => f.options.find(o => o.id === picks[f.key]) || (aiOpts[f.key] || []).find(o => o.id === picks[f.key]);
+  const curName = () => str(inputs.name?.value) || '主角';
+  const descOf = f => fillName(optionOf(f)?.desc || '', curName());
+  const ctxFor = skipKey => ({ name: str(inputs.name?.value), others: fields.filter(x => x.key !== skipKey).map(x => ({ label: x.label, option: optionOf(x) })), persona: persona?.value || '' });
+  const wish = h('textarea', { id: 'setup-wish', rows: 2, placeholder: '可选，对下面所有 ✨ 生成都生效。\n例如：治疗系；出身贫寒；和胡列娜是死对头' });
+  if (aiOn) body.append(h('p', { class: 'small muted', style: 'margin:0 0 10px;line-height:1.7' }, '每一项都可以单独换：从下拉框里挑，🎲 从预设里随机抽，✨ 让 AI 现编一个新的（会参考你已经定下的其他几项）。AI 编出来的选项会留在下拉框里，下次开局还能选。'),
+    h('div', { class: 'field' }, h('label', { for: 'setup-wish' }, '给 AI 的要求'), wish));
+  // 生成按钮的通用处理
+  async function withBusy(btn, fn) {
+    if (!S.apiKey) { toast('先在设置里填写 API 密钥'); return; }
+    if (btn.disabled) return;
+    btn.disabled = true; const old = btn.textContent; btn.textContent = '…';
+    try { await fn(); } catch (e) { toast('生成失败：' + String(e.message || e).slice(0, 70), 4000); }
+    finally { btn.disabled = false; btn.textContent = old; }
+  }
+  // 名字
   for (const st of script.stats.filter(x => x.type === 'text' && (x.ask || x.key === 'name'))) {
     const inp = h('input', { id: 'setup-' + st.key, placeholder: st.placeholder || '' }); inp.value = st.initial || '';
     inputs[st.key] = inp;
-    const dice = st.key === 'name' && names.length ? h('button', { class: 'dice', title: '随机一个名字', 'aria-label': '随机名字', onclick: () => { inp.value = names[Math.floor(Math.random() * names.length)]; refreshAuto(); } }, '🎲') : null;
+    const isName = st.key === 'name';
+    const dice = isName && names.length ? h('button', { class: 'dice', title: '从预设名字里随机', 'aria-label': '随机名字', onclick: () => { inp.value = names[Math.floor(Math.random() * names.length)]; refreshAuto(); } }, '🎲') : null;
+    const spark = isName && aiOn ? h('button', { class: 'dice ai', title: '让 AI 起一个名字', 'aria-label': 'AI 起名', onclick: () => withBusy(spark, async () => { inp.value = await genNameText(script, ctxFor(''), wish.value); await saveSettings(); refreshAuto(); }) }, '✨') : null;
     if (dice && !inp.value) inp.value = names[Math.floor(Math.random() * names.length)];
     inp.addEventListener('input', () => refreshAuto());
-    body.append(h('div', { class: 'field' }, h('label', { for: 'setup-' + st.key }, st.label), dice ? h('div', { class: 'row', style: 'flex-wrap:nowrap' }, inp, dice) : inp));
+    body.append(h('div', { class: 'field' }, h('label', { for: 'setup-' + st.key }, st.label), dice || spark ? h('div', { class: 'row', style: 'flex-wrap:nowrap' }, inp, dice, spark) : inp));
   }
-  // 随机开局表
-  const fields = creationFields(script);
-  const picks = {}, rollEls = {};
-  const curName = () => str(inputs.name?.value) || '主角';
-  const descOf = (f) => fillName(f.options.find(o => o.id === picks[f.key])?.desc || '', curName());
+  // 开局表的每一项
   if (fields.length) {
     body.append(h('div', { class: 'row', style: 'justify-content:space-between;margin:6px 0 10px' },
-      h('span', { class: 'small muted' }, '每次开新档都会随机抽取，也可以手动挑选。'),
-      h('button', { class: 'btn sm', onclick: () => { for (const f of fields) roll(f); refreshAuto(); } }, '🎲 全部重抽')));
+      h('span', { class: 'small muted' }, fields.map(f => f.label).join(' · ')),
+      h('button', { class: 'btn sm', onclick: () => { for (const f of fields) roll(f); refreshAuto(); } }, '🎲 全部从预设重抽')));
     const box = h('div', { class: 'roll' });
     for (const f of fields) {
-      const sel = selectEl('roll-' + f.key, f.options.map(o => [o.id, o.label]), '');
+      const sel = h('select', { id: 'roll-' + f.key });
       const desc = h('div', { class: 'desc' });
-      sel.onchange = () => { picks[f.key] = sel.value; desc.textContent = descOf(f); refreshAuto(); };
+      sel.onchange = () => { picks[f.key] = sel.value; refreshAuto(); };
+      const spark = aiOn ? h('button', { class: 'dice ai', title: `让 AI 现编一个新的${f.label}`, 'aria-label': 'AI 生成' + f.label, onclick: () => withBusy(spark, async () => {
+        desc.textContent = `AI 正在构思新的${f.label}……`;
+        try {
+          const o = await genFieldOption(script, f, ctxFor(f.key), wish.value);
+          aiOpts[f.key] = [...(aiOpts[f.key] || []), o].slice(-8);
+          await saveAiOptions(script.id, aiOpts);
+          picks[f.key] = o.id; fillSelect(f);
+        } finally { refreshAuto(); }
+      }) }, '✨') : null;
       rollEls[f.key] = { sel, desc };
       box.append(h('div', { class: 'roll-item' }, h('div', { class: 'lbl' }, f.label + (f.hint ? ` · ${f.hint}` : '')),
-        h('div', { class: 'row' }, sel, h('button', { class: 'dice', title: '重新随机', 'aria-label': '随机' + f.label, onclick: () => { roll(f); refreshAuto(); } }, '🎲')), desc));
+        h('div', { class: 'row' }, sel, h('button', { class: 'dice', title: '从预设里随机', 'aria-label': '随机' + f.label, onclick: () => { roll(f); refreshAuto(); } }, '🎲'), spark), desc));
     }
     body.append(box);
   }
-  function roll(f) { const o = weightedPick(f.options); picks[f.key] = o.id; rollEls[f.key].sel.value = o.id; rollEls[f.key].desc.textContent = descOf(f); }
-  for (const f of fields) roll(f);
+  function fillSelect(f) {
+    const { sel } = rollEls[f.key]; sel.innerHTML = '';
+    sel.append(h('optgroup', { label: '预设' }, ...f.options.map(o => h('option', { value: o.id }, o.label))));
+    const ai = aiOpts[f.key] || [];
+    if (ai.length) sel.append(h('optgroup', { label: 'AI 生成过的' }, ...ai.slice().reverse().map(o => h('option', { value: o.id }, '✨ ' + o.label))));
+    if (picks[f.key]) sel.value = picks[f.key];
+  }
+  function roll(f) { const o = weightedPick(f.options); picks[f.key] = o.id; rollEls[f.key].sel.value = o.id; }
+  for (const f of fields) { fillSelect(f); roll(f); }
   // 性格
   const pOpts = personaOptions(script);
   const pSel = selectEl('setup-persona-preset', pOpts.map(o => [o.id, o.name]), pOpts[0].id);
   const persona = h('textarea', { id: 'setup-persona', rows: 3 });
-  let personaDirty = false;
-  persona.addEventListener('input', () => { personaDirty = true; pSel.value = 'custom'; });
-  const applyPersona = () => { const o = pOpts.find(x => x.id === pSel.value); if (o && o.id !== 'custom') { persona.value = o.text; personaDirty = false; } };
+  persona.addEventListener('input', () => { pSel.value = 'custom'; });
+  const applyPersona = () => { const o = pOpts.find(x => x.id === pSel.value); if (o && o.id !== 'custom') persona.value = o.text; };
   pSel.onchange = applyPersona;
-  const pDice = h('button', { class: 'dice', title: '随机性格', 'aria-label': '随机性格', onclick: () => { const cand = pOpts.filter(o => o.id !== 'custom' && o.id !== 'script'); pSel.value = cand[Math.floor(Math.random() * cand.length)].id; applyPersona(); } }, '🎲');
+  const pDice = h('button', { class: 'dice', title: '从通用性格里随机', 'aria-label': '随机性格', onclick: () => { const cand = pOpts.filter(o => o.id !== 'custom' && o.id !== 'script'); pSel.value = cand[Math.floor(Math.random() * cand.length)].id; applyPersona(); } }, '🎲');
+  const pSpark = aiOn ? h('button', { class: 'dice ai', title: '让 AI 写一个性格', 'aria-label': 'AI 写性格', onclick: () => withBusy(pSpark, async () => { persona.value = await genPersonaText(script, ctxFor(''), wish.value); pSel.value = 'custom'; }) }, '✨') : null;
   if (!script.persona) pDice.click(); else applyPersona();
-  body.append(h('div', { class: 'field', style: 'margin-top:14px' }, h('label', { for: 'setup-persona-preset' }, '主角性格'), h('div', { class: 'row', style: 'flex-wrap:nowrap' }, pSel, pDice), persona,
-    h('div', { class: 'hint' }, '可以选一个通用性格，也可以直接改写。AI 会按这个性格来写别人眼中的你，并给出贴合性格的选项；你的行动始终由你决定。')));
+  body.append(h('div', { class: 'field', style: 'margin-top:14px' }, h('label', { for: 'setup-persona-preset' }, '主角性格'), h('div', { class: 'row', style: 'flex-wrap:nowrap' }, pSel, pDice, pSpark), persona,
+    h('div', { class: 'hint' }, 'AI 会按这个性格来写别人眼中的你，并给出贴合性格的选项；你的行动始终由你决定。')));
   // 身世
   const bg = h('textarea', { id: 'setup-bg', rows: 6 });
   let bgDirty = false;
   bg.addEventListener('input', () => { bgDirty = true; });
-  const bgBtn = h('button', { class: 'btn sm', onclick: async () => {
-    if (!S.apiKey) { toast('先在设置里填写 API 密钥'); return; }
-    bgBtn.disabled = true; bgBtn.textContent = '正在写…';
-    try { bg.value = await genBackground(script, fields.map(f => `【${f.label}】${f.options.find(o => o.id === picks[f.key])?.label}：${descOf(f)}`).join('\n'), str(inputs.name?.value), persona.value); bgDirty = true; await saveSettings(); }
-    catch (e) { toast('生成失败：' + String(e.message || e).slice(0, 60), 3500); }
-    bgBtn.disabled = false; bgBtn.textContent = '让 AI 写成完整身世';
-  } }, '让 AI 写成完整身世');
+  const bgBtn = h('button', { class: 'btn sm', onclick: () => withBusy(bgBtn, async () => {
+    bg.value = await genBackground(script, fields.map(f => `【${f.label}】${(optionOf(f)?.label || '').replace(/^✨\s*/, '')}：${descOf(f)}`).join('\n'), str(inputs.name?.value), persona.value);
+    bgDirty = true; await saveSettings();
+  }) }, '✨ AI 写成完整身世');
   if (fields.length) body.append(h('div', { class: 'field' }, h('label', { for: 'setup-bg' }, '身世'), bg,
-    h('div', { class: 'row', style: 'margin-top:6px;justify-content:space-between' }, h('span', { class: 'hint' }, '由上面的随机结果拼成，可以直接改写。'), bgBtn)));
+    h('div', { class: 'row', style: 'margin-top:6px;justify-content:space-between' }, h('span', { class: 'hint' }, '由上面各项拼成，可以直接改写；改了上面的选项会自动重拼（除非你手动改过）。'), bgBtn)));
   function refreshAuto() {
     for (const f of fields) rollEls[f.key].desc.textContent = descOf(f);
     if (!bgDirty && fields.length) bg.value = fields.map(f => descOf(f)).filter(Boolean).join('\n');
   }
   refreshAuto();
-  // 故事口味、文风、篇幅与节奏
-  body.append(h('div', { class: 'sec-h' }, '这一局想怎么玩'));
-  const profSel = selectEl('setup-profile', [...S.profiles.map(p => [p.id, p.name]), ['none', '不使用口味方案']], S.profiles.find(p => p.id === script.defaultProfile) ? script.defaultProfile : S.defaultProfile);
-  const profHint = h('div', { class: 'hint' });
-  const updProf = () => { const p = S.profiles.find(x => x.id === profSel.value); profHint.textContent = p ? profileSummary(p) : '只按剧本自身的设定走。'; };
-  profSel.onchange = updProf; updProf();
-  body.append(h('div', { class: 'field' }, h('label', { for: 'setup-profile' }, '故事口味'), profSel, profHint));
-  const styles = styleOptions(script);
-  const styleSel = selectEl('setup-style', styles.map(o => [o.id, o.name]), styles[0].id);
-  const styleHint = h('div', { class: 'hint' });
-  const updStyle = () => { const o = styles.find(x => x.id === styleSel.value); styleHint.textContent = o?.text ? o.text.slice(0, 80) + (o.text.length > 80 ? '…' : '') : ''; };
-  styleSel.onchange = updStyle; updStyle();
-  body.append(h('div', { class: 'field' }, h('label', { for: 'setup-style' }, '文风'), styleSel, styleHint));
-  const lenSel = selectEl('setup-length', [['short', '短（300～500 字）'], ['mid', '中（600～900 字）'], ['long', '长（1000～1500 字）']], S.length);
-  const paceSel = selectEl('setup-pace', [['slow', '慢（一回合一小步，细写当下）'], ['normal', '中（一回合一两步）'], ['fast', '快（一回合一整段，略写过渡）']], S.pace);
-  body.append(h('div', { class: 'row', style: 'align-items:flex-start' },
-    h('div', { class: 'field grow' }, h('label', { for: 'setup-length' }, '每回合篇幅'), lenSel),
-    h('div', { class: 'field grow' }, h('label', { for: 'setup-pace' }, '推进节奏'), paceSel)));
-  const useGP = h('input', { type: 'checkbox', id: 'setup-gp' }); useGP.checked = true;
-  body.append(h('label', { class: 'check', for: 'setup-gp' }, useGP, h('span', {}, '使用我的基础偏好', h('small', { class: 'muted', style: 'display:block' }, PREF_RULES.filter(r => S.prefs[r.key]).map(r => r.label).join('、') || '（设置里没有开启任何基础偏好）'))));
+  // 剧本设置（这个剧本的所有存档共用）
+  body.append(h('div', { class: 'sec-h' }, '剧本设置'));
+  body.append(h('p', { class: 'small muted', style: 'margin:-2px 0 12px;line-height:1.7' }, '这些设置属于这个剧本，它的所有存档共用。之后可以在书架的剧本卡片或游戏内的「玩法」页修改。'));
+  const setupPrefs = scriptPrefsOf(script.id, script);
+  body.append(scriptPrefsControls(script, setupPrefs, () => {}, 'setup'));
   body.append(h('div', { class: 'sec-h' }, '存档'));
   const saveName = h('input', { id: 'setup-savename', placeholder: '留空则自动命名' });
   body.append(h('div', { class: 'field' }, h('label', { for: 'setup-savename' }, '存档名称'), saveName));
@@ -2728,19 +2874,115 @@ async function openSetup(scriptId) {
     const vals = {}; for (const [k, i] of Object.entries(inputs)) vals[k] = str(i.value);
     if (!vals.name) { toast('先给主角起个名字'); inputs.name?.focus(); return; }
     if (!S.apiKey && !script.opening) { toast('这个剧本需要 AI 生成开场，请先在设置里填写密钥'); return; }
-    const so = styles.find(x => x.id === styleSel.value);
     if (fields.length && !bgDirty) refreshAuto();
-    const save = newSave(script, vals, persona.value, str(saveName.value), {
-      picks, background: fields.length ? fillName(bg.value, vals.name) : '',
-      length: lenSel.value, pace: paceSel.value, profileId: profSel.value, useGlobalPrefs: useGP.checked,
-      style: so && so.id !== 'none' ? { id: so.id, name: so.name, text: so.text } : null,
-    });
+    await setScriptPrefs(script.id, setupPrefs);
+    const chosen = {}; for (const f of fields) { const o = optionOf(f); if (o) chosen[f.key] = o; }
+    const save = newSave(script, vals, persona.value, str(saveName.value), { options: chosen, background: fields.length ? fillName(bg.value, vals.name) : '' });
     await persist(save);
     viewStack.pop(); // 开局页不留在返回栈里
     await enterGame(save);
     await startOpening(save);
   } }, '开始故事')));
   showView('setup');
+}
+
+/* ---------------- AI 生成全新主角 ---------------- */
+const GEN_SEEDS = ['左撇子', '怕水', '一紧张就结巴', '会唱家乡的小调', '天生一缕白发', '欠着一笔债', '有个双胞胎姐妹', '被退过婚', '养了一只瘸腿的猫', '过目不忘', '母亲不识字', '曾在邪魂师手里死里逃生', '是个路痴', '偷偷写诗', '厨艺惊人', '讨厌下雨天', '小时候偷过东西', '视力不好', '擅长算账', '有一个失踪的哥哥', '背上有一道旧疤', '随身带着一本旧书', '很会讨价还价', '怕黑', '被人冒领过功劳', '睡觉会说梦话', '收集奇怪的石头', '说话带着很重的乡音', '当过杂技团的学徒', '对某个大人物心怀怨恨', '寄养在别人家长大', '有一个不能说的本名', '擅长驯养小动物', '左耳听不见', '常常梦见同一个地方', '喜欢穿男装', '是家里唯一识字的人', '输过一场很重要的比试', '欠某人一条命', '家里开药铺', '被逐出过师门', '有个比她小很多的弟弟要养', '对酒过敏却总被人劝酒', '曾经想当画师'];
+function pickN(arr, n) { const a = [...arr], out = []; while (a.length && out.length < n) out.push(a.splice(Math.floor(Math.random() * a.length), 1)[0]); return out; }
+function aiOptionsOf(scriptId) { return clone((S.aiOptions || {})[scriptId] || {}); }
+async function saveAiOptions(scriptId, byField) { S.aiOptions[scriptId] = byField; await saveSettings(); }
+/* 从某个字段的预设选项推断它可以包含哪些键、设置哪些属性 */
+function fieldSchema(f) {
+  const keys = new Set(['label', 'desc']), statKeys = new Set();
+  for (const o of f.options) { for (const k of Object.keys(o)) if (!['id', 'weight', 'ai'].includes(k)) keys.add(k); for (const k of Object.keys(o.stats || {})) statKeys.add(k); }
+  return { keys: [...keys], statKeys: [...statKeys] };
+}
+function aiTemp() { return clamp(Number(S.temperature) || 1.3, 1.1, 1.5); }
+function ctxText(script, ctx) {
+  const lines = [`姓名：${ctx.name || '（未定）'}`];
+  for (const x of ctx.others || []) if (x.option) lines.push(`${x.label}：${x.option.label.replace(/^✨\s*/, '')}——${fillName(x.option.desc, ctx.name || '主角')}`);
+  if (ctx.persona) lines.push(`性格：${ctx.persona}`);
+  return lines.join('\n');
+}
+/* 为开局表的某一项现编一个新选项 */
+async function genFieldOption(script, f, ctx, wish) {
+  const cr = script.creation || {};
+  const sch = fieldSchema(f);
+  const statDefs = script.stats.filter(x => sch.statKeys.includes(x.key));
+  const roster = (script.characters || []).map(c => c.name);
+  const examples = pickN(f.options.filter(o => !o.ai), 2).map(o => { const e = clone(o); delete e.id; delete e.weight; return JSON.stringify(e); }).join('\n');
+  const hist = ((S.aiOptions?.[script.id]?.[f.key]) || []).map(o => o.label).slice(-8);
+  const keyDocs = [
+    '"label"：选项名，15 字以内',
+    '"desc"：60～150 字的说明，用 {name} 指代主角，第三人称',
+    statDefs.length ? `"stats"：只能包含这些属性：${statDefs.map(d => `${d.key}（${d.label}，${d.type === 'number' ? '数字' + (d.min !== undefined || d.max !== undefined ? `，${d.min ?? ''}～${d.max ?? ''}` : '') : '文本'}）`).join('、')}` : null,
+    sch.keys.includes('characters') ? '"characters"：0～1 个与这个设定相关的原创人物，字段与示例相同（含只给 AI 看的 motive、backstory、secret），"met" 为 true' : null,
+    sch.keys.includes('overrides') ? `"overrides"：主角开局时已经认识的原著人物（0～3 人），键为人物名，只能从这些人里选：${roster.join('、')}；值为 {"met": true, "relation": "关系", "friendliness": 0～100, "opinion": "此人对主角的看法"}` : null,
+    sch.keys.includes('stage') ? '"stage"：开局阶段标签（时间 · 地点）' : null,
+    sch.keys.includes('opening') ? '"opening"：开场要求，写明从什么场景写起、会与谁产生交集（100 字以内）' : null,
+    sch.keys.includes('objectives') ? '"objectives"：0～2 个开局目标，[{"title": "", "description": ""}]' : null,
+    sch.keys.includes('items') ? '"items"：0～2 件随身物品，[{"name": "", "desc": "", "count": 1}]' : null,
+  ].filter(Boolean);
+  const r = await chatOnce([
+    { role: 'system', content: `你是互动小说《${script.title}》的开局设定生成器，负责为主角现编新的设定选项。你只输出 JSON。` },
+    { role: 'user', content: `【剧本设定】
+${script.world}
+${cr.aiGuide ? `\n【总体要求】\n${cr.aiGuide}\n` : ''}
+【这次要生成】「${f.label}」的一个全新选项。${f.aiHint ? '\n' + f.aiHint : ''}
+
+【预设选项示例】（只作格式参考，内容要想出新的，不要雷同）
+${examples}
+
+【主角目前的其他设定】（新选项必须与之协调，不能矛盾）
+${ctxText(script, ctx)}
+
+【玩家的要求】${str(wish) || '无'}
+【灵感关键词】${pickN(GEN_SEEDS, 2).join('、')}（可以不用）
+${hist.length ? `【这一项最近生成过】${hist.join('、')}（这次要明显不同）\n` : ''}随机编号：${Math.floor(Math.random() * 1e6)}
+
+只输出一个 JSON 对象，只能包含这些键：
+${keyDocs.join('\n')}` },
+  ], { temperature: aiTemp(), maxTokens: 4000 });
+  addUsage(null, r.usage);
+  const o = parseLooseJSON(r.text);
+  if (!o || !str(o.label) || !str(o.desc)) throw new Error('AI 返回的内容无法解析，再试一次');
+  const out = { id: 'ai-' + uid(), ai: true, weight: 0, label: str(o.label).slice(0, 24), desc: str(o.desc) };
+  if (o.stats && typeof o.stats === 'object' && statDefs.length) {
+    out.stats = {};
+    for (const d of statDefs) if (o.stats[d.key] !== undefined && str(o.stats[d.key]) !== '') out.stats[d.key] = d.type === 'number' ? clamp(num(o.stats[d.key], num(d.initial, 0)), d.min, d.max) : str(o.stats[d.key]);
+  }
+  if (sch.keys.includes('characters') && Array.isArray(o.characters)) out.characters = o.characters.filter(c => c && str(c.name) && !roster.includes(str(c.name))).slice(0, 2).map(c => ({ ...c, met: true }));
+  if (sch.keys.includes('overrides') && o.overrides && typeof o.overrides === 'object' && !Array.isArray(o.overrides)) {
+    out.overrides = {};
+    for (const [n, v] of Object.entries(o.overrides)) if (roster.includes(n) && v && typeof v === 'object') out.overrides[n] = { met: true, relation: str(v.relation) || '相识', friendliness: clamp(num(v.friendliness, 45), 0, 100), ...(str(v.opinion) ? { opinion: str(v.opinion) } : {}) };
+  }
+  for (const k of ['stage', 'opening']) if (sch.keys.includes(k) && str(o[k])) out[k] = str(o[k]);
+  if (sch.keys.includes('objectives') && Array.isArray(o.objectives)) out.objectives = o.objectives.filter(x => x && str(x.title)).slice(0, 2);
+  if (sch.keys.includes('items') && Array.isArray(o.items)) out.items = o.items.filter(x => x && str(x.name)).slice(0, 2);
+  return out;
+}
+async function genPersonaText(script, ctx, wish) {
+  const r = await chatOnce([
+    { role: 'system', content: '你是互动小说的角色设定作者。你只输出 JSON。' },
+    { role: 'user', content: `剧本：${script.title}\n${script.intro || ''}\n\n主角目前的设定：\n${ctxText(script, { ...ctx, persona: '' })}\n\n玩家的要求：${str(wish) || '无'}\n灵感关键词：${pickN(GEN_SEEDS, 2).join('、')}（可以不用）\n随机编号：${Math.floor(Math.random() * 1e6)}\n\n请为主角写一段性格描述（60～100 字）：要有具体的言行习惯和一点矛盾之处，与上面的设定协调，不要写成标签堆砌。只输出 {"persona": "……"}` },
+  ], { temperature: aiTemp(), maxTokens: 1500 });
+  addUsage(null, r.usage);
+  const o = parseLooseJSON(r.text);
+  if (!o || !str(o.persona)) throw new Error('AI 返回的内容无法解析，再试一次');
+  return str(o.persona);
+}
+async function genNameText(script, ctx, wish) {
+  const avoid = [...(S.genHistory || []).map(g => g.name), ...(script.characters || []).map(c => c.name)].slice(-40);
+  const r = await chatOnce([
+    { role: 'system', content: '你是互动小说的角色设定作者。你只输出 JSON。' },
+    { role: 'user', content: `剧本：${script.title}\n${script.intro || ''}\n\n主角目前的设定：\n${ctxText(script, { ...ctx, name: '' })}\n\n玩家的要求：${str(wish) || '无'}\n不要用这些名字：${avoid.join('、') || '无'}\n随机编号：${Math.floor(Math.random() * 1e6)}\n\n请给主角起一个名字：符合世界观和她的出身，好读好记，避免烂大街的网文名。只输出 {"name": "……"}` },
+  ], { temperature: aiTemp(), maxTokens: 1000 });
+  addUsage(null, r.usage);
+  const o = parseLooseJSON(r.text);
+  if (!o || !str(o.name)) throw new Error('AI 返回的内容无法解析，再试一次');
+  const name = str(o.name).slice(0, 12);
+  S.genHistory = [...(S.genHistory || []), { name, hint: '' }].slice(-20);
+  return name;
 }
 
 async function genBackground(script, picksText, name, persona) {
@@ -2768,18 +3010,21 @@ ${picksText}
 /* ---------------- 游戏界面 ---------------- */
 async function openSave(id) { const sv = await DB.get('saves', id); if (sv) enterGame(sv); }
 async function enterGame(save) {
+  G.migrated = false;
   G.save = migrateSave(save); G.error = null; G.stream = null;
+  if (G.migrated) { await saveSettings(); await persist(save); }
   showView('game');
   renderGameHeader(); renderLog(); renderPaceBar(); setComposerBusy(G.busy);
   requestAnimationFrame(() => scrollLogToEnd(true));
 }
 function renderPaceBar() {
   const sv = G.save, bar = $('#pace-bar'); if (!sv) return;
-  const st = sv.state; bar.innerHTML = '';
-  const seg = (key, labels) => h('div', { class: 'seg', role: 'group' }, ...Object.entries(labels).map(([v, l]) => h('button', { 'aria-pressed': String(st[key] === v), title: key === 'pace' ? PACE_TEXT[v] : LENGTH_TEXT[v], onclick: async () => {
-    if (st[key] === v) return;
-    st[key] = v; await persist(sv); renderPaceBar();
-    toast(key === 'pace' ? PACE_TEXT[v].split('：')[0] + '，从下一回合开始生效' : `篇幅 ${LENGTH_TEXT[v]}，从下一回合开始生效`);
+  bar.innerHTML = '';
+  const cur = { length: effLength(sv), pace: effPace(sv) };
+  const seg = (key, labels) => h('div', { class: 'seg', role: 'group' }, ...Object.entries(labels).map(([v, l]) => h('button', { 'aria-pressed': String(cur[key] === v), title: key === 'pace' ? PACE_TEXT[v] : LENGTH_TEXT[v], onclick: async () => {
+    if (cur[key] === v) return;
+    const pr = scriptPrefsOf(sv.scriptId, sv.script); pr[key] = v; await setScriptPrefs(sv.scriptId, pr); renderPaceBar();
+    toast(`已设为这个剧本的${key === 'pace' ? PACE_TEXT[v].split('：')[0] : '篇幅：' + LENGTH_TEXT[v]}，下一回合生效`);
   } }, l)));
   const prof = resolveProfile(sv), sty = resolveStyle(sv);
   bar.append(
@@ -2820,12 +3065,15 @@ function renderLog() {
     el.append(h('div', { class: 'narr', html: narrHTML(e.narrative) }));
     if (e.chips?.length) el.append(h('div', { class: 'chips' }, ...e.chips.map(c => h('span', { class: 'chip' + (c.c ? ' c-' + c.c : '') }, c.t))));
     for (const w of e.warns || []) el.append(h('div', { class: 'warn-line' }, w));
+    if (e.raw && e.warns?.length) el.append(rawViewer(e.raw));
     if (isLast && !G.busy && !G.stream) {
       if (e.choices?.length) {
         el.append(h('div', { class: 'choices' }, ...e.choices.map(c => h('div', { class: 'choice' },
           h('button', { onclick: () => playTurn(c) }, c),
           h('button', { class: 'edit', 'aria-label': '修改后再发送', title: '修改后再发送', onclick: () => { const a = $('#action'); a.value = c; autoGrow(); a.focus(); } }, '✎')))));
       }
+      if (e.turn === 0 && !sv.script.opening && snapTurns.has(0)) el.append(h('div', { class: 'tools' },
+        h('button', { class: 'btn sm ghost', onclick: async () => { if (await ask('重新生成开场', '当前的开场会被换掉，AI 会按同样的开局设定重新写一个。', '重新生成')) regenOpening(); } }, '重新生成开场')));
       if (e.turn > 0) el.append(h('div', { class: 'tools' },
         h('button', { class: 'btn sm ghost', onclick: () => reroll() }, '重新生成'),
         h('button', { class: 'btn sm ghost', onclick: async () => { if (await ask('回退一回合', '撤销这一回合，状态恢复到上一回合结束时，你的行动会放回输入框。', '回退')) { const last = await rollback(); if (last) { $('#action').value = last.action; autoGrow(); } } } }, '回退')));
@@ -2844,11 +3092,16 @@ function renderLog() {
   if (G.error) {
     const isOpening = G.error.action === '__opening__';
     log.append(h('div', { class: 'error-box' }, G.error.message));
+    if (G.error.raw) log.append(rawViewer(G.error.raw));
     log.append(h('div', { class: 'tools' },
       h('button', { class: 'btn sm', onclick: () => { const a = G.error.action; G.error = null; if (isOpening) startOpening(G.save); else playTurn(a); } }, '重试'),
       isOpening ? null : h('button', { class: 'btn sm ghost', onclick: () => { $('#action').value = G.error.action; G.error = null; renderLog(); autoGrow(); } }, '放回输入框')));
   }
   if (!sv.log.length && !G.stream && !G.error && !G.busy) log.append(h('div', { class: 'stack', style: 'align-items:center;padding-top:30px' }, h('div', { class: 'empty' }, '故事还没有开始。'), h('button', { class: 'btn primary', onclick: () => startOpening(G.save) }, '生成开场')));
+}
+function rawViewer(raw) {
+  return h('details', { class: 'fold', style: 'margin-top:8px' }, h('summary', {}, '查看 AI 的原始回复'),
+    h('pre', { style: 'white-space:pre-wrap;font-size:12px;line-height:1.55;margin:8px 0 0;max-height:40vh;overflow:auto' }, str(raw) || '（空）'));
 }
 let streamRAF = 0;
 function updateStreamView() {
@@ -3100,41 +3353,11 @@ function sheetMemory(b) {
 function sheetPlay(b) {
   const sv = G.save, st = sv.state;
   const sec = t => b.append(h('div', { class: 'sec-h' }, t));
-  // 口味
-  sec('故事口味');
-  const prof = resolveProfile(sv);
-  const profSel = selectEl('play-profile', [...S.profiles.map(p => [p.id, p.name]), ...(prof && !S.profiles.find(p => p.id === prof.id) ? [[prof.id, prof.name + '（已删除的方案副本）']] : []), ['none', '不使用口味方案']], st.profileId || 'none');
-  profSel.onchange = async () => { if (guardBusy()) return; st.profileId = profSel.value; const p = S.profiles.find(x => x.id === profSel.value); if (p) st.profileSnapshot = clone(p); await commit('口味已切换，从下一回合开始生效'); };
-  b.append(h('div', { class: 'field' }, profSel, h('div', { class: 'hint' }, prof ? profileSummary(prof) : '只按剧本自身的设定走。')));
-  b.append(h('div', { class: 'row', style: 'margin:-4px 0 6px' },
-    prof && S.profiles.includes(prof) ? h('button', { class: 'btn sm', onclick: async () => { const r = await profileEditor(prof); if (r && r !== 'deleted') st.profileSnapshot = clone(r); await commit(r ? '方案已更新' : ''); } }, '编辑这套方案') : null,
-    h('button', { class: 'btn sm', onclick: async () => { const r = await profileEditor(null); if (r && r !== 'deleted') { st.profileId = r.id; st.profileSnapshot = clone(r); await commit('已新建并切换'); } } }, '新建方案')));
-  // 文风
-  sec('文风');
-  const styles = styleOptions(sv.script);
-  const cur = st.style?.id || 'none';
-  const opts = styles.map(o => [o.id, o.name]);
-  if (st.style && !styles.find(o => o.id === st.style.id)) opts.unshift([st.style.id, st.style.name + '（原文风副本）']);
-  const stySel = selectEl('play-style', opts, cur);
-  stySel.onchange = async () => { if (guardBusy()) return; const o = styles.find(x => x.id === stySel.value); st.style = o && o.id !== 'none' ? { id: o.id, name: o.name, text: o.text } : (stySel.value === st.style?.id ? st.style : null); await commit('文风已切换，从下一回合开始生效'); };
-  const sty = resolveStyle(sv);
-  b.append(h('div', { class: 'field' }, stySel, sty ? h('div', { class: 'hint' }, sty.text) : null));
-  b.append(h('div', { class: 'row', style: 'margin:-4px 0 6px' }, h('button', { class: 'btn sm', onclick: async () => { const r = await styleEditor(null); if (r) { st.style = { id: 'custom:' + r.id, name: r.name, text: r.text }; await commit('已新建并切换文风'); } } }, '新建自定义文风')));
-  // 篇幅节奏
-  sec('篇幅与节奏');
-  b.append(h('p', { class: 'small muted', style: 'margin:0 0 8px;line-height:1.7' }, '篇幅决定每回合写多细，节奏决定每回合推进多远，两者可以自由组合。游戏页输入框上方也可以随时切换。'));
-  const lenSel = selectEl('play-length', [['short', '短（300～500 字）'], ['mid', '中（600～900 字）'], ['long', '长（1000～1500 字）']], st.length);
-  const paceSel = selectEl('play-pace', [['slow', '慢：一回合一小步'], ['normal', '中：一回合一两步'], ['fast', '快：一回合一整段']], st.pace);
-  lenSel.onchange = async () => { st.length = lenSel.value; await commit(); };
-  paceSel.onchange = async () => { st.pace = paceSel.value; await commit(); };
-  b.append(h('div', { class: 'row', style: 'align-items:flex-start' }, h('div', { class: 'field grow' }, lenSel), h('div', { class: 'field grow' }, paceSel)));
-  // 基础偏好
-  sec('基础偏好');
-  const gp = h('input', { type: 'checkbox', id: 'play-gp' }); gp.checked = st.useGlobalPrefs !== false;
-  gp.onchange = async () => { st.useGlobalPrefs = gp.checked; await commit(gp.checked ? '本局使用基础偏好' : '本局不使用基础偏好'); };
-  b.append(h('label', { class: 'check', for: 'play-gp' }, gp, h('span', {}, '本局使用我的基础偏好', h('small', { class: 'muted', style: 'display:block' }, PREF_RULES.filter(r => S.prefs[r.key]).map(r => r.label).join('、') + (str(S.prefs.extra) ? '，以及自定义偏好' : '') + '。在设置里修改。'))));
-  // 人设与要求
-  sec('主角');
+  sec('剧本设置');
+  b.append(h('p', { class: 'small muted', style: 'margin:-2px 0 12px;line-height:1.7' }, `对《${sv.script.title}》的所有存档生效，改动从下一回合开始。`));
+  const prefs = scriptPrefsOf(sv.scriptId, sv.script);
+  b.append(scriptPrefsControls(sv.script, prefs, async p => { if (G.busy) { toast('生成中，稍后再改'); renderSheet(); return; } await setScriptPrefs(sv.scriptId, p); renderPaceBar(); toast('剧本设置已保存'); }, 'play', { allowEdit: true, rerender: () => renderSheet() }));
+  sec('本局 · 主角');
   const persona = h('textarea', { id: 'persona-text', rows: 4 }); persona.value = st.persona || '';
   const pOpts = personaOptions(sv.script);
   const pSel = selectEl('persona-preset', [['keep', '— 换成通用性格 —'], ...pOpts.filter(o => o.id !== 'custom').map(o => [o.id, o.name])], 'keep');
@@ -3143,7 +3366,7 @@ function sheetPlay(b) {
   const bgText = h('textarea', { id: 'bg-text', rows: 5 }); bgText.value = st.background || '';
   b.append(h('div', { class: 'field' }, h('label', { for: 'bg-text' }, '主角身世'), bgText));
   const inst = h('textarea', { id: 'inst-text', rows: 3, placeholder: '例如：接下来多写一些阿莺的戏份。' }); inst.value = st.playInstruction || '';
-  b.append(h('div', { class: 'field' }, h('label', { for: 'inst-text' }, '对接下来剧情的要求'), inst, h('div', { class: 'hint' }, '每回合都会发给 AI，直到你清空它。')));
+  b.append(h('div', { class: 'field' }, h('label', { for: 'inst-text' }, '对接下来剧情的要求'), inst, h('div', { class: 'hint' }, '只对这个存档生效，每回合都会发给 AI，直到你清空它。')));
   b.append(h('div', { class: 'row end' }, h('button', { class: 'btn sm primary', onclick: async () => { if (guardBusy()) return; st.persona = persona.value.trim(); st.background = bgText.value.trim(); st.playInstruction = inst.value.trim(); await commit('已保存'); } }, '保存')));
 }
 
@@ -3181,8 +3404,15 @@ function renderSettings() {
   field('maxTokens', '单次最多输出 tokens', input(S.maxTokens, { type: 'number', inputmode: 'numeric' }), '剧情加状态更新一般用 1500～2500。');
   b.append(h('div', { class: 'row', style: 'margin-bottom:8px' }, h('button', { class: 'btn', id: 'btn-test', onclick: async () => {
     const btn = $('#btn-test'); readForm(); btn.disabled = true; btn.textContent = '测试中…';
-    try { const r = await chatOnce([{ role: 'user', content: '只回复两个字：你好' }], { maxTokens: 20, temperature: 0 }); addUsage(null, r.usage); toast('连接成功：' + str(r.text).slice(0, 20)); await saveSettings(); }
-    catch (e) { openModal({ title: '连接失败', body: h('p', { style: 'white-space:pre-wrap' }, e.message || String(e)) }); }
+    const t0 = Date.now();
+    try {
+      const r = await chatOnce([{ role: 'user', content: '用一句话介绍你自己，不超过二十个字。' }], { maxTokens: 800, temperature: 0.7 });
+      addUsage(null, r.usage); await saveSettings();
+      const secs = ((Date.now() - t0) / 1000).toFixed(1);
+      openModal({ title: '连接成功', body: h('div', {},
+        h('dl', { class: 'kv' }, h('dt', {}, '模型'), h('dd', {}, S.model), h('dt', {}, '回复'), h('dd', {}, str(r.text).slice(0, 80)), h('dt', {}, '用时'), h('dd', {}, secs + ' 秒')),
+        r.reasoning ? h('p', { class: 'warn-line', style: 'line-height:1.7' }, S.disableThinking ? '注意：虽然勾选了“关闭思考模式”，这次回复仍然带有思考过程。这个服务可能不支持关闭思考，游戏会慢一些、也更费额度，建议把“单次最多输出 tokens”保持在 8000 以上。' : '这次回复带有思考过程（思考模式开着）。游戏会慢一些，也更费额度。') : h('p', { class: 'small muted' }, '没有思考过程，一切正常。')) });
+    } catch (e) { openModal({ title: '连接失败', body: h('p', { style: 'white-space:pre-wrap' }, e.message || String(e)) }); }
     btn.disabled = false; btn.textContent = '测试连接';
   } }, '测试连接')));
 
@@ -3199,13 +3429,13 @@ function renderSettings() {
 
   // 口味方案
   b.append(h('div', { class: 'sec-h' }, '故事口味方案'));
-  b.append(h('p', { class: 'small muted', style: 'margin:0 0 10px;line-height:1.7' }, '按心情准备几套方案，开局时选一套，游戏中途也能换。标“默认”的那套会在开新游戏时预先选中。'));
+  b.append(h('p', { class: 'small muted', style: 'margin:0 0 10px;line-height:1.7' }, '方案库。每个剧本在自己的「剧本设置」里选用其中一套，也可以选“跟随全局默认”。'));
   const plist = h('div', { class: 'stack', style: 'margin-bottom:10px' });
   for (const p of S.profiles) {
     plist.append(h('div', { class: 'card opt-card' },
       h('div', { class: 'body' }, h('b', {}, p.name), h('p', {}, profileSummary(p)), p.extra ? h('p', {}, p.extra) : null),
       h('div', { class: 'stack', style: 'gap:6px;align-items:flex-end' },
-        p.id === S.defaultProfile ? h('span', { class: 'badge' }, '默认') : h('button', { class: 'btn sm ghost', onclick: async () => { readForm(); S.defaultProfile = p.id; await saveSettings(); renderSettings(); } }, '设为默认'),
+        p.id === S.defaultProfile ? h('span', { class: 'badge' }, '全局默认') : null,
         h('button', { class: 'btn sm', onclick: async () => { readForm(); await profileEditor(p); renderSettings(); } }, '编辑'))));
   }
   b.append(plist, h('div', { class: 'row', style: 'margin-bottom:6px' }, h('button', { class: 'btn sm', onclick: async () => { readForm(); await profileEditor(null); renderSettings(); } }, '新建方案')));
@@ -3220,10 +3450,12 @@ function renderSettings() {
   const style = h('textarea', { rows: 3, placeholder: '例如：少用成语；不要替我说话。' }); style.value = S.globalStyle;
   field('globalStyle', '写作习惯（叠加在任何文风之上）', style, '对所有剧本生效，适合写一些你讨厌的写法。');
 
-  // 默认篇幅节奏
-  b.append(h('div', { class: 'sec-h' }, '新游戏的默认篇幅与节奏'));
-  field('length', '篇幅（写多细）', selectEl('x', [['short', '短：300～500 字'], ['mid', '中：600～900 字'], ['long', '长：1000～1500 字']], S.length));
-  field('pace', '节奏（推多远）', selectEl('x', [['slow', '慢：一回合一小步，故事内时间只过几分钟'], ['normal', '中：一回合一两步'], ['fast', '快：一回合一整段，可以跳过过渡和时间']], S.pace));
+  // 全局默认
+  b.append(h('div', { class: 'sec-h' }, '全局默认'));
+  b.append(h('p', { class: 'small muted', style: 'margin:0 0 10px;line-height:1.7' }, '篇幅、节奏、口味和文风都在每个剧本的「剧本设置」里单独选。剧本设置里选了“跟随全局默认”的项，才会用这里的值。想让所有剧本一起换口味，改这里就行。'));
+  field('length', '篇幅（写多细）', selectEl('x', LENGTH_OPTS, S.length));
+  field('pace', '节奏（推多远）', selectEl('x', PACE_OPTS, S.pace));
+  field('defaultProfile', '故事口味', selectEl('x', [...S.profiles.map(p => [p.id, p.name]), ['none', '不使用口味方案']], S.defaultProfile));
 
   b.append(h('div', { class: 'sec-h' }, '记忆'));
   field('recentTurns', '保留原文的回合数', input(S.recentTurns, { type: 'number', min: '1', max: '10', inputmode: 'numeric' }), '最近几回合的剧情原文直接发给 AI。越多越连贯，也越费 tokens。推荐 3～5。');
@@ -3246,7 +3478,7 @@ function renderSettings() {
 
   b.append(h('div', { class: 'sec-h' }, '数据'));
   b.append(h('div', { class: 'row' },
-    h('button', { class: 'btn', onclick: async () => { const all = { app: 'changye-wenyou', v: APP_VERSION, exportedAt: Date.now(), scripts: await DB.all('scripts'), saves: await DB.all('saves'), prefs: { prefs: S.prefs, profiles: S.profiles, defaultProfile: S.defaultProfile, customStyles: S.customStyles, globalStyle: S.globalStyle, length: S.length, pace: S.pace } }; download(`长夜书局-全部备份-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(all)); } }, '备份全部剧本和存档'),
+    h('button', { class: 'btn', onclick: async () => { const all = { app: 'changye-wenyou', v: APP_VERSION, exportedAt: Date.now(), scripts: await DB.all('scripts'), saves: await DB.all('saves'), prefs: { prefs: S.prefs, profiles: S.profiles, defaultProfile: S.defaultProfile, customStyles: S.customStyles, globalStyle: S.globalStyle, length: S.length, pace: S.pace, scriptPrefs: S.scriptPrefs } }; download(`长夜书局-全部备份-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(all)); } }, '备份全部剧本和存档'),
     h('button', { class: 'btn', onclick: async () => {
       const text = await pickFile(); if (!text) return;
       let all; try { all = JSON.parse(text); } catch { toast('文件不是有效的 JSON'); return; }
@@ -3267,6 +3499,7 @@ function renderSettings() {
     S.maxTokens = clamp(Math.round(num(fields.maxTokens.value, 3000)), 500, 16000);
     S.length = fields.length.value;
     S.pace = fields.pace.value;
+    S.defaultProfile = fields.defaultProfile.value;
     S.globalStyle = fields.globalStyle.value.trim();
     for (const r of PREF_RULES) S.prefs[r.key] = prefBoxes[r.key].checked;
     S.prefs.extra = fields.prefExtra.value.trim();

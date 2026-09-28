@@ -215,6 +215,8 @@ details.fold summary{cursor:pointer;color:var(--muted);font-size:13.5px}
 .roll-item .desc.extra{white-space:pre-wrap;font-size:12.5px;color:var(--faint);margin-top:4px}
 .roll-item .desc.extra:empty{display:none}
 .update-card{border-color:var(--accent);margin-bottom:16px}
+#update-bar{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:70;display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--accent);border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.15);font-size:14px;line-height:1.5}
+#update-bar span{flex:1}
 .unmet{margin-top:14px}
 .dice.ai{color:var(--rose)}
 .dice:disabled{opacity:.5}
@@ -308,6 +310,7 @@ details.fold summary{cursor:pointer;color:var(--muted);font-size:13.5px}
    ========================================================= */
 
 const APP_VERSION = 1;
+const BUILD = '2026-09-29.1'; // 网页版本号：每次发布都改一下，打开着的页面会拿它和网站上的最新版比较
 const STATE_MARK = '###STATE###';
 
 /* ---------------- 工具 ---------------- */
@@ -3853,7 +3856,11 @@ function renderSettings() {
       if (all.prefs) { Object.assign(S, all.prefs); await saveSettings(); await loadSettings(); renderSettings(); }
       toast(`已恢复 ${(all.scripts || []).length} 个剧本、${(all.saves || []).length} 个存档`);
     } }, '从备份恢复')));
-  b.append(h('p', { class: 'small muted', style: 'margin:16px 0 30px' }, '备份包含剧本、存档、偏好、口味方案和文风库，不包含 API 密钥。'));
+  b.append(h('p', { class: 'small muted', style: 'margin:16px 0 12px' }, '备份包含剧本、存档、偏好、口味方案和文风库，不包含 API 密钥。'));
+  b.append(h('div', { class: 'sec-h' }, '版本'));
+  b.append(h('div', { class: 'row', style: 'align-items:center;margin-bottom:30px' },
+    h('span', { class: 'small muted', style: 'flex:1' }, `当前网页版本：${BUILD}`),
+    h('button', { class: 'btn sm', onclick: () => checkForUpdate(true) }, '检查更新')));
 
   function readForm() {
     S.baseUrl = str(fields.baseUrl.value) || DEFAULT_SETTINGS.baseUrl;
@@ -3880,6 +3887,38 @@ function renderSettings() {
 }
 $('#btn-open-settings').onclick = () => { renderSettings(); showView('settings'); };
 
+/* ---------------- 版本更新：手机浏览器常常沿用缓存里的旧网页，这里主动去网站上看最新的版本号 ---------------- */
+let newBuild = null, updateChecking = false, lastUpdateCheck = 0;
+async function fetchLatestBuild() {
+  const res = await fetch(location.pathname + '?check=' + Date.now(), { cache: 'no-store' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const m = (await res.text()).match(/const BUILD = '(\d{4}-\d{2}-\d{2}\.\d+)'/);
+  return m ? m[1] : null;
+}
+async function checkForUpdate(manual = false) {
+  if (updateChecking || !/^https?:$/.test(location.protocol)) return;
+  if (!manual && Date.now() - lastUpdateCheck < 3 * 60 * 1000) return;
+  updateChecking = true; lastUpdateCheck = Date.now();
+  try {
+    const latest = await fetchLatestBuild();
+    if (latest && latest !== BUILD) { newBuild = latest; showUpdateBar(); }
+    else if (manual) toast(`已经是最新版本（${BUILD}）`);
+  } catch (e) { if (manual) toast('检查更新失败：' + (e.message || e)); }
+  finally { updateChecking = false; }
+}
+function showUpdateBar() {
+  $('#update-bar')?.remove();
+  document.body.append(h('div', { id: 'update-bar' },
+    h('span', {}, `网页有新版本（${newBuild}）。更新后存档和设置都还在。`),
+    h('button', { class: 'btn sm primary', onclick: applyUpdate }, '更新'),
+    h('button', { class: 'btn sm ghost', 'aria-label': '稍后', onclick: () => $('#update-bar')?.remove() }, '稍后')));
+}
+async function applyUpdate() {
+  if (G.busy) { toast('等这一回合写完再更新'); return; }
+  try { await fetch(location.pathname, { cache: 'reload' }); } catch {} // 顺便刷新不带参数的网址的缓存
+  location.replace(location.pathname + '?v=' + encodeURIComponent(newBuild || String(Date.now())));
+}
+
 /* ---------------- 启动 ---------------- */
 (async function boot() {
   await DB.open();
@@ -3887,6 +3926,8 @@ $('#btn-open-settings').onclick = () => { renderSettings(); showView('settings')
   if (DB.fallback) toast('浏览器不支持 IndexedDB，改用简易存储，容量较小');
   renderShelf();
   window.addEventListener('beforeunload', e => { if (G.busy) { e.preventDefault(); e.returnValue = ''; } });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkForUpdate(); });
+  checkForUpdate();
 })();
 
 // 供测试使用

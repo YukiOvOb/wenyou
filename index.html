@@ -1,0 +1,1979 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="长夜书局">
+<meta name="theme-color" content="#eef1f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#12161b" media="(prefers-color-scheme: dark)">
+<title>长夜书局</title>
+<style>
+:root{
+  --ground:#eef1f3; --surface:#ffffff; --surface-2:#f6f8f9; --ink:#1f2530; --muted:#687282; --faint:#98a1ad;
+  --line:#d9dee4; --accent:#2f5d62; --accent-ink:#ffffff; --accent-soft:#dfeceb;
+  --rose:#b3475d; --rose-soft:#f5e3e7; --amber:#a86a12; --amber-soft:#f6ecd9; --danger:#b3261e;
+  --shadow:0 10px 40px rgba(20,30,40,.18);
+  --serif:"Songti SC","STSong","Noto Serif CJK SC","Source Han Serif SC","Noto Serif SC","SimSun",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","HarmonyOS Sans SC","MiSans","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
+  --read-size:17px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#12161b; --surface:#1a2028; --surface-2:#161b22; --ink:#e3e7ec; --muted:#95a0ad; --faint:#66707c;
+    --line:#2a323d; --accent:#7fb3ad; --accent-ink:#0f1a19; --accent-soft:#1e3230;
+    --rose:#e08a9c; --rose-soft:#3a2229; --amber:#e0b060; --amber-soft:#3a2f1c; --danger:#f28b82;
+    --shadow:0 10px 40px rgba(0,0,0,.5); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#12161b; --surface:#1a2028; --surface-2:#161b22; --ink:#e3e7ec; --muted:#95a0ad; --faint:#66707c;
+  --line:#2a323d; --accent:#7fb3ad; --accent-ink:#0f1a19; --accent-soft:#1e3230;
+  --rose:#e08a9c; --rose-soft:#3a2229; --amber:#e0b060; --amber-soft:#3a2f1c; --danger:#f28b82;
+  --shadow:0 10px 40px rgba(0,0,0,.5); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--ground);color:var(--ink);font:15px/1.6 var(--sans);-webkit-text-size-adjust:100%;overflow:hidden}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+#app{height:100%;display:flex;flex-direction:column;max-width:760px;margin:0 auto;padding-top:env(safe-area-inset-top,0px)}
+.view{flex:1;display:flex;flex-direction:column;min-height:0}
+.bar{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--ground);min-height:52px}
+.bar h1{font:600 19px/1.2 var(--serif);margin:0;flex:1;letter-spacing:.06em}
+.bar .ttl{flex:1;min-width:0}
+.bar .ttl b{display:block;font:600 16px/1.3 var(--serif);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .ttl small{display:block;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;overscroll-behavior:contain}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.danger{color:var(--danger)}
+.btn.sm{min-height:32px;padding:4px 10px;font-size:13px;border-radius:8px}
+.btn:disabled{opacity:.45;cursor:default}
+.icon-btn{border:0;background:transparent;width:40px;height:40px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;color:var(--ink)}
+.icon-btn svg{width:22px;height:22px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row.end{justify-content:flex-end}
+.grow{flex:1}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.sec-h{font:600 13px/1 var(--sans);color:var(--muted);letter-spacing:.12em;margin:22px 0 10px}
+.sec-h:first-child{margin-top:4px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.stack{display:flex;flex-direction:column;gap:10px}
+.empty{color:var(--faint);font-size:14px;padding:6px 0}
+
+/* shelf */
+.script-card h3{font:600 18px/1.35 var(--serif);margin:0 0 4px}
+.script-card p{margin:6px 0 10px;color:var(--muted);font-size:14px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-size:12px;padding:1px 8px;border-radius:99px;background:var(--surface-2);border:1px solid var(--line);color:var(--muted)}
+.save-item{display:flex;gap:12px;align-items:center;cursor:pointer}
+.save-item .meta{flex:1;min-width:0}
+.save-item b{font:600 16px/1.35 var(--serif);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.save-item small{color:var(--muted);font-size:12.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.turn-badge{font:600 12px/1 var(--sans);font-variant-numeric:tabular-nums;color:var(--accent);background:var(--accent-soft);border-radius:8px;padding:8px 8px;min-width:48px;text-align:center}
+
+/* log */
+#log{padding:18px 18px 28px}
+.entry{margin-bottom:22px}
+.act{display:flex;justify-content:flex-end;margin:0 0 14px}
+.act span{max-width:86%;background:var(--accent-soft);color:var(--ink);border-radius:14px 14px 4px 14px;padding:8px 12px;font-size:14.5px;white-space:pre-wrap}
+.narr{font:var(--read-size)/1.95 var(--serif);letter-spacing:.02em}
+.narr p{margin:0 0 .9em;text-indent:2em}
+.narr .dlg{color:var(--accent)}
+.turn-mark{display:flex;align-items:center;gap:10px;color:var(--faint);font-size:12px;margin:0 0 12px;font-variant-numeric:tabular-nums}
+.turn-mark::before,.turn-mark::after{content:"";flex:1;height:1px;background:var(--line)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start;margin-top:4px}
+.chip{font-size:12px;padding:3px 9px;border-radius:99px;border:1px solid var(--line);background:var(--surface);color:var(--muted)}
+.chip.c-ev{border-color:var(--amber);color:var(--amber);background:var(--amber-soft)}
+.chip.c-ch{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.chip.c-up{color:var(--accent)} .chip.c-down{color:var(--rose)}
+.chip.c-af{border-color:var(--rose);color:var(--rose);background:var(--rose-soft)}
+.warn-line{font-size:12.5px;color:var(--amber);margin-top:6px}
+.choices{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.choice{display:flex;align-items:stretch;border:1px solid var(--line);background:var(--surface);border-radius:12px;overflow:hidden}
+.choice button{border:0;background:transparent;text-align:left;padding:11px 14px;flex:1;font-size:15px;line-height:1.5}
+.choice button.edit{flex:0 0 44px;border-left:1px solid var(--line);color:var(--muted);text-align:center;padding:0}
+.choice button:active{background:var(--surface-2)}
+.tools{display:flex;gap:4px;justify-content:center;margin-top:12px}
+.streaming-hint{color:var(--muted);font-size:13px;display:flex;align-items:center;gap:8px;margin:6px 0}
+.dots{display:inline-flex;gap:3px}
+.dots i{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:blink 1.2s infinite}
+.dots i:nth-child(2){animation-delay:.2s}.dots i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.dots i{animation:none;opacity:.7}}
+.error-box{border:1px solid var(--danger);color:var(--danger);border-radius:12px;padding:10px 12px;font-size:14px;margin-top:8px;white-space:pre-wrap}
+
+#composer{border-top:1px solid var(--line);background:var(--ground);padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px))}
+.input-row{display:flex;gap:8px;align-items:flex-end}
+#action{flex:1;resize:none;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:9px 12px;min-height:42px;max-height:130px;line-height:1.5}
+#send{min-width:64px;height:42px}
+
+/* sheet */
+#scrim{position:fixed;inset:0;background:rgba(10,14,20,.42);z-index:20}
+#sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;max-width:760px;margin:0 auto;height:88%;background:var(--ground);border-radius:18px 18px 0 0;box-shadow:var(--shadow);display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px)}
+.sheet-head{display:flex;align-items:center;padding:8px 8px 0 16px}
+.sheet-head b{flex:1;font:600 16px/1 var(--serif)}
+.tabs{display:flex;gap:2px;padding:8px 12px;overflow-x:auto;border-bottom:1px solid var(--line);scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{border:0;background:transparent;padding:7px 12px;border-radius:99px;color:var(--muted);white-space:nowrap;font-size:14px}
+.tab[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.sheet-body{flex:1;overflow-y:auto;padding:14px 16px 24px}
+
+.stat-row{display:grid;grid-template-columns:5.5em 1fr auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line);cursor:pointer}
+.stat-row:last-child{border-bottom:0}
+.stat-row .lbl{color:var(--muted);font-size:14px}
+.stat-row .val{font-variant-numeric:tabular-nums;font-size:14px}
+.meter{height:6px;background:var(--surface-2);border:1px solid var(--line);border-radius:99px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.meter.rose i{background:var(--rose)}
+.txt-val{grid-column:2 / 4;font-size:14.5px}
+
+.char{display:flex;gap:12px;cursor:pointer}
+.avatar{flex:0 0 44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font:600 19px/1 var(--serif);color:#fff}
+.char .body{flex:1;min-width:0}
+.char .name{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.char .name b{font:600 16px/1.3 var(--serif)}
+.char .name small{color:var(--muted);font-size:12.5px}
+.char .op{font-size:13.5px;color:var(--muted);margin:4px 0 8px}
+.mini-meters{display:grid;grid-template-columns:auto 1fr auto;gap:4px 8px;align-items:center;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.dim{opacity:.55}
+
+.ev{display:grid;grid-template-columns:3.2em 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.ev:last-child{border-bottom:0}
+.ev .t{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums;padding-top:3px}
+.ev b{font-weight:600}
+.ev p{margin:2px 0 0;font-size:13.5px;color:var(--muted)}
+.ev.done b{text-decoration:line-through;text-decoration-color:var(--faint);color:var(--muted)}
+.pill{display:inline-block;font-size:11.5px;border-radius:99px;padding:0 7px;margin-left:6px;vertical-align:1px;border:1px solid currentColor}
+.pill.major{color:var(--amber)} .pill.ok{color:var(--accent)} .pill.fail{color:var(--rose)}
+
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.field label{font-size:13px;color:var(--muted)}
+.field input,.field textarea,.field select{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 11px;width:100%}
+.field textarea{resize:vertical;min-height:80px;line-height:1.6}
+.field .hint{font-size:12px;color:var(--faint)}
+.check{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;font-size:14px}
+.check input{margin-top:4px;width:18px;height:18px}
+textarea.code{font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;min-height:55vh}
+
+/* modal */
+#modal-wrap{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-end;justify-content:center;background:rgba(10,14,20,.45)}
+#modal{background:var(--ground);width:100%;max-width:640px;max-height:92%;border-radius:18px 18px 0 0;display:flex;flex-direction:column;box-shadow:var(--shadow);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (min-width:700px){#modal-wrap{align-items:center}#modal{border-radius:18px;max-height:86%}}
+.modal-head{padding:16px 16px 8px;font:600 17px/1.3 var(--serif)}
+.modal-body{padding:4px 16px 8px;overflow-y:auto;flex:1}
+.modal-foot{display:flex;gap:8px;justify-content:flex-end;padding:10px 16px 14px;border-top:1px solid var(--line);flex-wrap:wrap}
+#toast{position:fixed;left:50%;bottom:calc(170px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:9px 16px;border-radius:99px;font-size:14px;z-index:60;max-width:88%;text-align:center;pointer-events:none;opacity:0;transition:opacity .2s}
+#toast.on{opacity:.95}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13.5px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-variant-numeric:tabular-nums}
+details.fold{border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:12px;background:var(--surface)}
+details.fold summary{cursor:pointer;color:var(--muted);font-size:13.5px}
+.note-list{margin:4px 0 0;padding-left:1.2em;font-size:13.5px;color:var(--muted)}
+.setup-intro{font:15.5px/1.85 var(--serif);white-space:pre-wrap;margin:0 0 6px}
+
+/* 篇幅/节奏开关 */
+.pace-bar{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;margin-bottom:8px;font-size:12.5px;color:var(--muted)}
+.pace-bar .grp{display:flex;align-items:center;gap:6px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:transparent;padding:4px 11px;font-size:13px;color:var(--muted);min-height:30px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.pace-bar .cur{margin-left:auto;max-width:44%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+
+/* 词条 */
+.traits{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 8px}
+.trait{font-size:12px;border:1px dashed var(--accent);color:var(--accent);border-radius:6px;padding:1px 7px}
+.trait.unk{border-color:var(--line);color:var(--faint)}
+.trait-list{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:8px}
+.trait-list li{border:1px dashed var(--accent);border-radius:10px;padding:8px 11px;font-size:14px;background:var(--surface)}
+.trait-list li b{color:var(--accent);font-weight:600}
+.trait-list li small{color:var(--faint);margin-left:6px}
+.chip.c-rv{border-style:dashed;border-color:var(--accent);color:var(--accent)}
+
+/* 方案与文风 */
+.opt-card{display:flex;gap:10px;align-items:flex-start}
+.opt-card .body{flex:1;min-width:0}
+.opt-card b{font:600 15.5px/1.4 var(--serif)}
+.opt-card p{margin:3px 0 0;font-size:13px;color:var(--muted);line-height:1.6}
+.badge{font-size:11.5px;border-radius:99px;padding:1px 8px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.multi{display:flex;flex-direction:column;gap:6px}
+.multi label{display:flex;gap:9px;align-items:flex-start;font-size:14px;line-height:1.5;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 10px}
+.multi input{margin-top:3px;width:17px;height:17px;flex:0 0 auto}
+.multi small{display:block;color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 书架 -->
+  <section class="view" id="v-shelf">
+    <header class="bar">
+      <h1>长夜书局</h1>
+      <button class="icon-btn" id="btn-open-settings" aria-label="设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    </header>
+    <main class="scroll">
+      <div id="key-warning" class="card small" hidden style="margin-bottom:14px;border-color:var(--amber)">还没有填写 API 密钥。先到右上角「设置」里填好，才能开始游戏。</div>
+      <div class="sec-h">继续游戏</div>
+      <div id="save-list" class="stack"></div>
+      <div class="sec-h">剧本</div>
+      <div id="script-list" class="stack"></div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn" id="btn-new-script">新建剧本</button>
+        <button class="btn" id="btn-import-script">导入剧本文件</button>
+        <button class="btn" id="btn-import-save">导入存档</button>
+      </div>
+    </main>
+  </section>
+
+  <!-- 开局 -->
+  <section class="view" id="v-setup" hidden>
+    <header class="bar">
+      <button class="icon-btn" data-back aria-label="返回"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="ttl"><b id="setup-title">新游戏</b><small>创建角色</small></div>
+    </header>
+    <main class="scroll" id="setup-body"></main>
+  </section>
+
+  <!-- 游戏 -->
+  <section class="view" id="v-game" hidden>
+    <header class="bar">
+      <button class="icon-btn" id="btn-leave" aria-label="返回书架"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="ttl"><b id="g-title"></b><small id="g-sub"></small></div>
+      <button class="icon-btn" id="btn-panel" aria-label="状态面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></button>
+    </header>
+    <main class="scroll" id="log" aria-live="polite"></main>
+    <footer id="composer">
+      <div class="pace-bar" id="pace-bar"></div>
+      <div class="input-row">
+        <textarea id="action" rows="1" placeholder="输入你的行动或台词…"></textarea>
+        <button class="btn primary" id="send">发送</button>
+      </div>
+    </footer>
+  </section>
+
+  <!-- 设置 -->
+  <section class="view" id="v-settings" hidden>
+    <header class="bar">
+      <button class="icon-btn" data-back aria-label="返回"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="ttl"><b>设置</b><small>只保存在这台设备的浏览器里</small></div>
+    </header>
+    <main class="scroll" id="settings-body"></main>
+  </section>
+</div>
+
+<div id="scrim" hidden></div>
+<div id="sheet" hidden role="dialog" aria-label="状态面板">
+  <div class="sheet-head"><b>状态面板</b><button class="icon-btn" id="sheet-close" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="tabs" role="tablist" id="sheet-tabs"></div>
+  <div class="sheet-body" id="sheet-body"></div>
+</div>
+<div id="modal-wrap" hidden><div id="modal" role="dialog" aria-modal="true"><div class="modal-head" id="modal-head"></div><div class="modal-body" id="modal-body"></div><div class="modal-foot" id="modal-foot"></div></div></div>
+<div id="toast"></div>
+<input type="file" id="file-in" accept=".json,application/json,text/plain" hidden>
+
+<script>
+'use strict';
+/* =========================================================
+   长夜书局 · AI 文字冒险引擎
+   结构：存储 → 设置 → 剧本 → 状态 → 上下文拼装 → API → 解析/合并 → 游戏循环 → 界面
+   ========================================================= */
+
+const APP_VERSION = 1;
+const STATE_MARK = '###STATE###';
+
+/* ---------------- 工具 ---------------- */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const clone = o => JSON.parse(JSON.stringify(o));
+const clamp = (v, lo, hi) => Math.min(hi ?? Infinity, Math.max(lo ?? -Infinity, v));
+const num = (v, d = 0) => { const n = typeof v === 'number' ? v : parseFloat(String(v ?? '').replace(/[^\d.+-]/g, '')); return Number.isFinite(n) ? n : d; };
+const str = v => (v === undefined || v === null) ? '' : String(v).trim();
+function h(tag, attrs = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === undefined || v === null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k === 'html') el.innerHTML = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (k === 'style') el.style.cssText = v;
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const k of kids.flat()) if (k !== null && k !== undefined && k !== false) el.append(k.nodeType ? k : document.createTextNode(k));
+  return el;
+}
+function fmtTime(t) {
+  const d = new Date(t), now = new Date();
+  const p = n => String(n).padStart(2, '0');
+  if (d.toDateString() === now.toDateString()) return `今天 ${p(d.getHours())}:${p(d.getMinutes())}`;
+  return `${d.getMonth() + 1}月${d.getDate()}日 ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function hueOf(s) { let x = 0; for (const c of String(s)) x = (x * 31 + c.codePointAt(0)) % 360; return x; }
+function avatarEl(c) {
+  const ch = c.avatar && [...c.avatar].length <= 2 ? c.avatar : [...(c.name || '?')][0];
+  return h('div', { class: 'avatar', style: `background:hsl(${hueOf(c.name)} 32% 44%)` }, ch);
+}
+let toastTimer;
+function toast(msg, ms = 2200) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), ms);
+}
+function download(filename, text) {
+  const blob = new Blob([text], { type: 'application/json' });
+  const a = h('a', { href: URL.createObjectURL(blob), download: filename });
+  document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+function pickFile() {
+  return new Promise(res => {
+    const inp = $('#file-in'); inp.value = '';
+    inp.onchange = () => { const f = inp.files[0]; if (!f) return res(null); const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => res(null); r.readAsText(f); };
+    inp.click();
+  });
+}
+
+/* ---------------- 存储（IndexedDB，失败时退回 localStorage） ---------------- */
+const DB = {
+  db: null, fallback: false,
+  open() {
+    return new Promise(res => {
+      try {
+        const req = indexedDB.open('changye-wenyou', 1);
+        req.onupgradeneeded = () => { const db = req.result; for (const s of ['kv', 'scripts', 'saves']) if (!db.objectStoreNames.contains(s)) db.createObjectStore(s, { keyPath: 'id' }); };
+        req.onsuccess = () => { this.db = req.result; res(); };
+        req.onerror = () => { this.fallback = true; res(); };
+      } catch { this.fallback = true; res(); }
+    });
+  },
+  _ls(store) { try { return JSON.parse(localStorage.getItem('cy_' + store) || '{}'); } catch { return {}; } },
+  _lsw(store, o) { try { localStorage.setItem('cy_' + store, JSON.stringify(o)); } catch (e) { toast('存储空间不足，存档可能没有保存'); } },
+  tx(store, mode, fn) {
+    return new Promise((res, rej) => { const t = this.db.transaction(store, mode); const s = t.objectStore(store); const r = fn(s); t.oncomplete = () => res(r && r.result); t.onerror = () => rej(t.error); });
+  },
+  async get(store, id) { if (this.fallback) return this._ls(store)[id] || null; return (await this.tx(store, 'readonly', s => s.get(id))) || null; },
+  async all(store) { if (this.fallback) return Object.values(this._ls(store)); return (await this.tx(store, 'readonly', s => s.getAll())) || []; },
+  async put(store, val) { if (this.fallback) { const o = this._ls(store); o[val.id] = val; this._lsw(store, o); return; } await this.tx(store, 'readwrite', s => s.put(val)); },
+  async del(store, id) { if (this.fallback) { const o = this._ls(store); delete o[id]; this._lsw(store, o); return; } await this.tx(store, 'readwrite', s => s.delete(id)); },
+};
+
+/* ---------------- 设置 ---------------- */
+const DEFAULT_SETTINGS = {
+  baseUrl: 'https://api.deepseek.com',
+  apiKey: '',
+  model: 'deepseek-flash',
+  disableThinking: true,
+  temperature: 1.3,
+  maxTokens: 3000,
+  length: 'mid',          // 新游戏默认篇幅 short | mid | long
+  pace: 'normal',         // 新游戏默认节奏 slow | normal | fast
+  prefs: null,            // 基础偏好，见 DEFAULT_PREFS
+  profiles: null,         // 故事口味方案，见 DEFAULT_PROFILES
+  defaultProfile: 'p-ensemble',
+  customStyles: [],       // 我的文风库 [{id,name,text}]
+  recentTurns: 3,       // 原文保留回合数
+  summaryInterval: 3,     // 每累积多少回合压缩一次
+  memoryMaxChars: 1500,   // 剧情摘要上限
+  snapshotLimit: 30,      // 可回退回合数
+  globalStyle: '',        // 全局写作偏好
+  theme: 'auto',
+  readSize: 17,
+  usage: { prompt: 0, completion: 0, cached: 0, calls: 0 },
+};
+let S = clone(DEFAULT_SETTINGS);
+async function loadSettings() {
+  const rec = await DB.get('kv', 'settings');
+  S = Object.assign(clone(DEFAULT_SETTINGS), rec ? rec.value : {});
+  S.prefs = Object.assign(clone(DEFAULT_PREFS), S.prefs || {});
+  if (!Array.isArray(S.profiles) || !S.profiles.length) S.profiles = clone(DEFAULT_PROFILES);
+  if (!Array.isArray(S.customStyles)) S.customStyles = [];
+  if (!S.profiles.find(p => p.id === S.defaultProfile)) S.defaultProfile = S.profiles[0].id;
+  applyTheme();
+}
+async function saveSettings() { await DB.put('kv', { id: 'settings', value: S }); applyTheme(); }
+function applyTheme() {
+  const r = document.documentElement;
+  if (S.theme === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', S.theme);
+  r.style.setProperty('--read-size', (S.readSize || 17) + 'px');
+}
+/* ---------------- 篇幅与节奏（两个独立维度） ---------------- */
+const LENGTH_TEXT = { short: '300～500 字', mid: '600～900 字', long: '1000～1500 字' };
+const LENGTH_LABEL = { short: '短', mid: '中', long: '长' };
+const PACE_LABEL = { slow: '慢', normal: '中', fast: '快' };
+const PACE_TEXT = {
+  slow: '慢节奏：本回合只推进一个剧情节拍（一个动作及其直接反应，或一轮对话的来回），故事内时间一般只过去几分钟。不切换场景，不引入新的事件或线索。',
+  normal: '标准节奏：推进一到两个剧情节拍，故事内时间可以过去十几分钟到一两个小时。除非玩家的行动要求，否则不切换场景。',
+  fast: '快节奏：推进一段完整的剧情，可以跳过无关紧要的过渡、切换场景，故事内时间可以过去数小时到数天（用一两句话带过）。但遇到重要人物的抉择、冲突爆发或需要玩家表态的时刻，必须停下交给玩家。',
+};
+const LENGTH_HOW = { short: '篇幅简短，只写最关键的动作与对白', mid: '篇幅适中', long: '篇幅充裕，可以展开神态、动作、环境与对白中的停顿和潜台词' };
+function paceBlock(st) {
+  const L = st.length || S.length, P = st.pace || S.pace;
+  return `【本回合的篇幅与节奏】（这是两个独立的要求，不要混为一谈）
+篇幅：正文约 ${LENGTH_TEXT[L]}。篇幅只决定“写得多细”。
+节奏：${PACE_TEXT[P]} 节奏只决定“剧情推进多远”。
+合起来就是：${LENGTH_HOW[L]}，同时${P === 'slow' ? '只推进很小的一步' : P === 'fast' ? '推进一整段剧情' : '推进一到两步'}。不要因为节奏快就把字数写多，也不要因为篇幅长就多推进剧情；篇幅长而节奏慢时，把笔墨用在同一时刻的细节上；篇幅短而节奏快时，用概括性的叙述快速带过。`;
+}
+
+/* ---------------- 文风 ---------------- */
+const STYLE_PRESETS = [
+  { id: 'preset:lightnovel', name: '日式轻小说 · 吐槽', text: '轻快、口语化的日式轻小说腔调。旁白带有吐槽感，会对荒诞处境做一针见血的调侃（旁白吐槽，不替主角说话）。句子短，节奏跳跃，多用对白推进，人物说话各有口癖和反差萌。严肃场面也保留一点幽默的余韵，但关键情感时刻要收住笑点、认真写。' },
+  { id: 'preset:daily', name: '日常 · 细水长流', text: '温和、生活化的日常文风。关注吃饭、天气、街巷、小物件、随口的闲聊，从琐碎细节里写出人物的性格和彼此的关系。冲突温和，情绪含蓄，节奏舒缓，留白多于渲染。避免宏大叙事和夸张修辞。' },
+  { id: 'preset:gufeng', name: '古风 · 典雅', text: '半文半白的古风文风。用词典雅，适度使用四字词与对仗，但不堆砌辞藻；对白使用符合身份的古人称谓与语气（如“姑娘”“殿下”“在下”），不出现现代词汇和网络用语。环境描写借景写情，礼仪、服饰、器物细节准确。' },
+  { id: 'preset:terse', name: '冷峻白描', text: '冷静克制的白描文风。短句为主，少用形容词和比喻，用动作和对白代替心理描写与情绪渲染。重要的情绪只写外在表现，让读者自己体会。叙述不评判人物，信息给得克制。' },
+  { id: 'preset:literary', name: '细腻文学', text: '细腻的文学性文风。重视感官细节（光线、气味、声音、触感）和人物的微表情、小动作，用意象暗示情绪；比喻少而准。句式长短交错，节奏从容。人物的内心通过行为和对白外显，不直接陈述。' },
+  { id: 'preset:webnovel', name: '网文 · 热血爽快', text: '节奏明快的网文风格。冲突直接，对白有张力和火药味，打斗与能力的描写具体清晰（招式、属性、克制关系交代明白），关键时刻有高光与反转。叙述干脆，不拖沓，每回合都有明确的看点。' },
+];
+function styleOptions(script) {
+  const out = [];
+  if (script && str(script.style)) out.push({ id: 'script', name: '剧本默认文风', text: str(script.style) });
+  out.push(...STYLE_PRESETS, ...(S.customStyles || []).map(s => ({ ...s, id: 'custom:' + s.id })));
+  out.push({ id: 'none', name: '不指定（只按剧本规则）', text: '' });
+  return out;
+}
+function resolveStyle(save) {
+  const st = save.state; const sel = st.style;
+  if (!sel || !sel.id || sel.id === 'none') return null;
+  const live = styleOptions(save.script).find(o => o.id === sel.id);
+  return live || (sel.text ? sel : null);
+}
+
+/* ---------------- 基础偏好（所有剧本生效） ---------------- */
+const PREF_RULES = [
+  { key: 'femaleDefault', label: '主角默认是女性', text: '主角性别：如果剧本没有明确规定主角的性别，主角是女性。' },
+  { key: 'womenBonds', label: '重视女性情谊', text: '女性情谊：女性角色有自己的目标、友谊、竞争与羁绊，她们之间有独立于主角和男性角色的互动。不要把女性角色写成只为男性角色服务、或只围绕男性角色的感情而存在。' },
+  { key: 'openRomance', label: '主角可以爱慕任何性别', text: '情感取向：主角是双性恋/泛性恋，可以与任何性别的角色发展爱慕，不预设异性恋，也不因对方的性别而回避或刻意强调。其他角色的取向按其自身设定。' },
+  { key: 'friendshipOk', label: '亲近不等于恋爱', text: '友情与爱情：亲近不等于恋爱。人物之间（尤其是女性之间）深厚的关系可以一直是友情、姐妹情、战友情，或介于二者之间的羁绊；是否转为爱慕由互动自然发展，并尊重玩家的选择，不要擅自升级为暧昧或恋爱。' },
+  { key: 'depth', label: '角色立体、有立场', text: '角色立体度：每个角色（包括反派和配角）都有自己的立场、利益与逻辑，每个决定都有原因，性格与过往经历相关联。不写工具人和脸谱化的反派。人物面对不同的人、在不同场合会展现不同的一面。' },
+];
+const DEFAULT_PREFS = { femaleDefault: true, womenBonds: true, openRomance: true, friendshipOk: true, depth: true, extra: '' };
+
+/* ---------------- 故事口味方案（可存多套，按局选择） ---------------- */
+const FOCUS_OPTS = [['plot', '剧情优先'], ['balance', '剧情与感情并重'], ['romance', '感情优先']];
+const FOCUS_TEXT = {
+  plot: '剧情优先：主线事件、势力博弈与世界的各种可能性是核心。感情线要有，但作为人物关系的一部分自然存在，不喧宾夺主。',
+  balance: '剧情与感情并重：主线事件和人物关系交替推进，彼此影响。',
+  romance: '感情优先：剧情可以复杂，但事件主要服务于人物感情的推进与考验，重要情节最终要落到主角与在意之人关系的变化上。',
+};
+const INTRIGUE_OPTS = [['none', '无'], ['light', '少量'], ['mid', '中等'], ['heavy', '大量']];
+const INTRIGUE_TEXT = {
+  none: '权谋：不刻意加入权谋与算计。',
+  light: '权谋：偶尔有利益算计和暗流，不作为主线。',
+  mid: '权谋：各方势力有明确的利益冲突与博弈，人物会结盟、试探、交易与背叛。',
+  heavy: '权谋：权谋是主菜。多方势力各自布局，信息差、借刀杀人、层层反转；人物说话多有潜台词，主角的每个选择都会牵动局势。',
+};
+const ROMANCE_OPTS = [
+  ['angst', '恨海情天', '爱恨交织、立场对立下的深情，误会、牺牲与执念，情感浓烈'],
+  ['sweet', '甜宠', '温柔、互相偏爱，少虐'],
+  ['slowburn', '慢热暧昧', '感情在长期相处中慢慢积累，暧昧期长，不急于确认关系'],
+  ['bonds', '友情与团队羁绊', '同伴之间的信任、争吵与并肩作战，和爱情同样重要'],
+  ['complex', '复杂关系', '感情与立场、利益、愧疚、敬畏交织，不一定走向恋爱'],
+  ['faint', '感情线淡化', '感情点到为止，不作为看点'],
+];
+const INTENSITY_OPTS = [['gentle', '温和'], ['ups', '有起伏'], ['heavy', '虐心']];
+const INTENSITY_TEXT = { gentle: '情绪强度：温和，少有沉重的伤痛与失去。', ups: '情绪强度：有冲突、误解与失去，但总留有希望。', heavy: '情绪强度：允许沉重的代价、遗憾与心碎的时刻。' };
+const DEFAULT_PROFILES = [
+  { id: 'p-romance', name: '感情至上 · 恨海情天', focus: 'romance', intrigue: 'light', romance: ['angst', 'complex'], intensity: 'heavy', extra: '剧情可以很复杂，但最终都要落到主角与心上人之间的爱恨纠葛上。' },
+  { id: 'p-ensemble', name: '剧情群像', focus: 'plot', intrigue: 'mid', romance: ['bonds', 'complex', 'slowburn'], intensity: 'ups', extra: '更想看剧情本身的各种可能性和群像。感情线要写，但不一定是轰轰烈烈的爱情，可以是团队友谊和更复杂的关系。' },
+  { id: 'p-intrigue', name: '权谋博弈', focus: 'plot', intrigue: 'heavy', romance: ['complex'], intensity: 'ups', extra: '' },
+  { id: 'p-daily', name: '日常治愈', focus: 'balance', intrigue: 'none', romance: ['sweet', 'bonds', 'slowburn'], intensity: 'gentle', extra: '' },
+];
+function profileText(p) {
+  if (!p) return '';
+  const rs = (p.romance || []).map(k => ROMANCE_OPTS.find(o => o[0] === k)).filter(Boolean);
+  return [
+    FOCUS_TEXT[p.focus] || '',
+    INTRIGUE_TEXT[p.intrigue] || '',
+    rs.length ? `感情线的形态：${rs.map(o => `${o[1]}（${o[2]}）`).join('；')}。` : '',
+    INTENSITY_TEXT[p.intensity] || '',
+    str(p.extra) ? `补充：${str(p.extra)}` : '',
+  ].filter(Boolean).map(x => '- ' + x).join('\n');
+}
+function profileSummary(p) {
+  if (!p) return '';
+  const f = FOCUS_OPTS.find(o => o[0] === p.focus)?.[1], i = INTRIGUE_OPTS.find(o => o[0] === p.intrigue)?.[1];
+  const r = (p.romance || []).map(k => ROMANCE_OPTS.find(o => o[0] === k)?.[1]).filter(Boolean).join('、');
+  return `${f || ''} · 权谋${i || ''}${r ? ' · ' + r : ''}`;
+}
+function resolveProfile(save) {
+  const st = save.state;
+  if (!st.profileId || st.profileId === 'none') return null;
+  return S.profiles.find(p => p.id === st.profileId) || st.profileSnapshot || null;
+}
+
+/* ---------------- 内置剧本 ---------------- */
+const BUILTIN_SCRIPTS = [
+{
+  id: 'demo-fog-harbor',
+  builtin: true,
+  title: '雾港来信',
+  author: '演示剧本',
+  tags: ['民国风', '悬疑', '短篇'],
+  intro: '你是雾港邮局新来的见习邮差。十年前，你的母亲在这座终年起雾的港城“失足落海”。今天清晨分拣信件时，你发现了一封寄给她的信，邮戳是三天前的，没有寄信人。',
+  world: `【时代与地点】
+架空的民国风海港城市“雾港”，终年多雾，汽笛声昼夜不停。主要地点：雾港邮局（老城北口，三层灰楼）、北岬灯塔、三号码头、洋行街的“福隆洋行”、码头边的“莺歌酒馆”、港务警署、废弃的钟楼。
+
+【主角】
+玩家是雾港邮局新来的见习邮差，二十出头，三个月前从内地来到雾港。母亲沈兰十年前死在雾港，官方记录为“夜间失足落海”。玩家来雾港，一半是谋生，一半是想弄清母亲在这里的最后几年。
+
+【开端】
+清晨分拣时，玩家发现一封收件人写着“沈兰女士”的信。信封是本地的廉价牛皮纸，邮戳日期为三天前，没有寄信人。信里只有一行字：“账在钟里，灯会告诉你几点。”
+
+【真相（仅主持人知晓，不可直接透露，要让玩家通过调查逐步发现）】
+1. 沈兰当年是福隆洋行的账房。她发现洋行与港务局的沈局长勾结，借北岬灯塔的灯语给夜间走私船指路。她抄下了一本暗账，藏进钟楼大钟的机芯里，不久后被人推下码头。
+2. 寄信人是灯塔守老周。当年正是他按洋行吩咐打灯语，他知道沈兰藏账的地方，却一直不敢说。他最近咯血，自知时日无多，想把真相交给“沈兰的家人”，但怕被灭口，不敢署名。
+3. “灯会告诉你几点”：灯塔每晚的闪灯次数对应钟楼大钟需要拨到的时刻，拨对了机芯暗格才会打开。
+4. 沈局长至今在任，是警探陆鸣的上司。陆鸣对此毫不知情。
+5. 酒馆老板娘阿莺是沈兰的旧友，保管着沈兰留下的一把铜钥匙（钟楼侧门）。她不会轻易交给陌生人，需要先建立信任。
+
+【节奏】
+这是一个短篇悬疑故事，大约 20～40 回合能走到结局。前期以打听消息、接近人物为主，中期出现危险与试探，后期进入钟楼。玩家可能走向揭发、交易或放弃等不同结局。`,
+  style: '冷静克制的民国悬疑文风。多用环境细节（雾、汽笛、潮湿的石阶）营造气氛，短句为主，对白简短、有潜台词，不直接渲染情绪。',
+  rules: `线索要公平：每条关键线索都应当能从人物言行或场景细节中被合理发现，不要凭空出现。
+危险是真实的：如果玩家行事鲁莽，反派会察觉并施压。`,
+  relationLabels: { friendliness: '信任', affection: '心动' },
+  stats: [
+    { key: 'name', label: '姓名', type: 'text', ask: true, initial: '', placeholder: '例如：沈知微' },
+    { key: 'identity', label: '身份', type: 'text', initial: '雾港邮局见习邮差' },
+    { key: 'stamina', label: '体力', type: 'number', initial: 100, min: 0, max: 100, display: 'bar' },
+    { key: 'progress', label: '调查进度', type: 'number', initial: 0, min: 0, max: 100, display: 'bar' },
+    { key: 'suspicion', label: '被盯上', type: 'number', initial: 0, min: 0, max: 100, display: 'bar' },
+    { key: 'money', label: '银元', type: 'number', initial: 12, min: 0 },
+  ],
+  persona: '沉静、观察力强，不太爱说话，但认定的事会追到底。',
+  characters: [
+    { name: '许棠', identity: '雾港邮局柜台主管', appearance: '三十岁上下，短发，总穿深蓝布旗袍，袖口别着铅笔', personality: '干练、嘴硬心软，讨厌麻烦却见不得人受欺负', relation: '上司', brief: '玩家的直属上司，邮局里最说一不二的人。', opinion: '新来的，手脚还算利索。', friendliness: 45, affection: 0, importance: 'major', motive: '守住邮局的规矩和自己的饭碗，也护着手下的人。', backstory: '早年丈夫在码头事故中去世，她一个人在邮局熬成主管，知道这座城里有些事不能问。', secret: '她早注意到那封信没有外埠邮戳，是有人夜里直接投进邮局后门信箱的。她不确定该不该告诉玩家。' },
+    { name: '老周', identity: '北岬灯塔守', appearance: '六十多岁，背微驼，常年咳嗽，手上有旧烫伤', personality: '沉默寡言，对谁都客气，眼神躲闪', relation: '陌生人', brief: '在北岬灯塔守了三十年的老人。', opinion: '没见过这个人。', friendliness: 30, affection: 0, importance: 'major', motive: '想在死前赎罪，又怕连累家人。', backstory: '年轻时欠了洋行一大笔债，被逼着替走私船打灯语，从此再没离开过灯塔。', secret: '他就是寄信人，当年亲手为走私船打灯语。他最近咯血，想赎罪，但极度害怕。' },
+    { name: '陆鸣', identity: '港务警署探员', appearance: '二十六七岁，高个，风衣总是湿的', personality: '正直、莽撞，对旧案有兴趣，但信任自己的上司', relation: '陌生人', brief: '警署里少见的愿意跑腿办案的年轻探员。', opinion: '没见过这个人。', friendliness: 40, affection: 0, importance: 'supporting', motive: '想破一件真正的大案证明自己，不愿做警署里混日子的人。', backstory: '父亲是被冤枉入狱的码头工人，他当警察是为了不让同样的事再发生。', secret: '他的上司沈局长就是当年压下沈兰案的人，他不知情。' },
+    { name: '阿莺', identity: '莺歌酒馆老板娘', appearance: '四十岁，风韵犹存，耳后别一朵绢花', personality: '八面玲珑，消息灵通，真心只给极少数人', relation: '陌生人', brief: '码头上什么消息都瞒不过她。', opinion: '没见过这个人。', friendliness: 35, affection: 0, importance: 'supporting', motive: '在码头各方势力之间周旋，保住酒馆，也在等一个能替沈兰讨公道的人。', backstory: '年轻时和沈兰一起从乡下来雾港讨生活，沈兰出事那晚本来约了她。', secret: '她是沈兰的旧友，保管着钟楼侧门的铜钥匙。' },
+  ],
+  objectives: [
+    { title: '找到寄信人', description: '这封没有署名的信是谁寄的？', status: 'active', progress: 0 },
+    { title: '弄清母亲的死因', description: '十年前的“失足落海”是否另有隐情。', status: 'active', progress: 0 },
+  ],
+  items: [
+    { name: '无名信', desc: '寄给母亲的信，只有一行字：“账在钟里，灯会告诉你几点。”', count: 1 },
+    { name: '邮差挎包', desc: '邮局配发，装着当天要送的信件。', count: 1 },
+  ],
+  stage: '第一天 · 清晨 · 雾港邮局',
+  opening: `雾是从海上一寸一寸爬进城的。清晨六点，雾港邮局的分拣室只点了一盏灯，汽笛在远处响了三声。
+
+你把昨夜收进来的信倒在长桌上，按街区分进木格子。手指碰到一封牛皮纸信封时，你停住了。
+
+收件人一栏，用钢笔写着四个字：沈兰女士。
+
+那是你母亲的名字。她已经死了十年。
+
+邮戳是三天前的，地址是一处早就拆掉的老宅。没有寄信人。你拆开信封，里面只有一张对折的纸，上面一行字，字迹歪斜，像是写字的人手在抖：
+
+“账在钟里，灯会告诉你几点。”
+
+身后传来高跟鞋的声音。许棠端着搪瓷杯站在门口，看了一眼你手里的信，又看了一眼你。
+
+“发什么愣？”她说，“八点前三号码头那一包要送出去。”`,
+  openingChoices: ['把信收好，装作没事，先去送三号码头的邮包', '问许棠：这封信是什么时候收进来的？', '仔细检查信封和邮戳，看有没有别的线索'],
+},
+];
+
+const SCRIPT_TEMPLATE = {
+  id: '',
+  title: '新剧本',
+  author: '',
+  tags: ['标签'],
+  intro: '书架上显示的简介，写给玩家看。',
+  world: '剧本正文：世界观、时代背景、主角身份、开端、主要势力、人物关系、暗线与真相（可注明“仅主持人知晓”）。这部分会完整发给 AI。',
+  rules: '剧本专属规则，例如：叙事视角、禁忌、必须遵守的设定。',
+  style: '剧本默认文风（可留空）。开局时玩家可以换成其他文风。',
+  relationLabels: { friendliness: '好感', affection: '心动' },
+  stats: [
+    { key: 'name', label: '姓名', type: 'text', ask: true, initial: '', placeholder: '主角的名字' },
+    { key: 'hp', label: '体力', type: 'number', initial: 100, min: 0, max: 100, display: 'bar' },
+  ],
+  persona: '主角的默认人设，开局时可以改。',
+  characters: [
+    { name: '示例人物', identity: '身份', appearance: '外貌', personality: '性格', relation: '与主角的关系', brief: '一句话简介', opinion: '对主角的初始看法', friendliness: 50, affection: 0, importance: 'major', motive: '立场与动机（只给 AI 看）', backstory: '过往经历，性格的来源（只给 AI 看）', secret: '秘密（只给 AI 看）' },
+  ],
+  objectives: [{ title: '初始目标', description: '说明', status: 'active', progress: 0 }],
+  items: [],
+  stage: '第一天 · 清晨',
+  opening: '开场白（可留空，留空则由 AI 生成开场）。可以用 {name} 代表主角名。',
+  openingChoices: ['选项一', '选项二', '选项三'],
+};
+
+function normalizeScript(raw) {
+  const errors = [];
+  if (!raw || typeof raw !== 'object') return { ok: false, errors: ['不是有效的 JSON 对象'] };
+  const s = clone(raw);
+  s.id = str(s.id) || 'custom-' + uid();
+  s.title = str(s.title); if (!s.title) errors.push('缺少标题 title');
+  s.world = str(s.world); if (!s.world) errors.push('缺少剧本正文 world');
+  s.intro = str(s.intro); s.rules = str(s.rules); s.style = str(s.style); s.author = str(s.author); s.persona = str(s.persona);
+  s.tags = Array.isArray(s.tags) ? s.tags.map(str).filter(Boolean) : [];
+  s.relationLabels = Object.assign({ friendliness: '好感', affection: '心动' }, s.relationLabels || {});
+  s.stats = Array.isArray(s.stats) ? s.stats.filter(x => x && x.key).map(x => ({ ...x, key: str(x.key), label: str(x.label) || str(x.key), type: x.type === 'text' ? 'text' : 'number' })) : [];
+  if (!s.stats.find(x => x.key === 'name')) s.stats.unshift({ key: 'name', label: '姓名', type: 'text', ask: true, initial: '' });
+  const keys = new Set(); for (const x of s.stats) { if (keys.has(x.key)) errors.push('属性 key 重复：' + x.key); keys.add(x.key); }
+  s.characters = Array.isArray(s.characters) ? s.characters.filter(c => c && str(c.name)) : [];
+  s.objectives = Array.isArray(s.objectives) ? s.objectives.filter(o => o && str(o.title)) : [];
+  s.items = Array.isArray(s.items) ? s.items.filter(i => i && str(i.name)) : [];
+  s.openingChoices = Array.isArray(s.openingChoices) ? s.openingChoices.map(str).filter(Boolean) : [];
+  s.opening = str(s.opening); s.stage = str(s.stage);
+  delete s.builtin;
+  return { ok: errors.length === 0, errors, script: s };
+}
+async function listScripts() {
+  const user = await DB.all('scripts');
+  const ids = new Set(user.map(s => s.id));
+  return [...user.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)), ...BUILTIN_SCRIPTS.filter(s => !ids.has(s.id))];
+}
+async function getScript(id) { return (await DB.get('scripts', id)) || BUILTIN_SCRIPTS.find(s => s.id === id) || null; }
+
+/* ---------------- 存档与状态 ---------------- */
+function makeCharacter(c, turn = 0) {
+  return {
+    id: uid(), name: str(c.name), aliases: Array.isArray(c.aliases) ? c.aliases : [],
+    avatar: str(c.avatar), identity: str(c.identity), appearance: str(c.appearance), personality: str(c.personality),
+    relation: str(c.relation), brief: str(c.brief), opinion: str(c.opinion),
+    motive: str(c.motive), backstory: str(c.backstory), secret: str(c.secret),
+    traits: Array.isArray(c.traits) ? c.traits.filter(t => t && str(t.title)) : [],
+    status: str(c.status) || '在世', importance: ['major', 'supporting', 'minor'].includes(c.importance) ? c.importance : 'supporting',
+    friendliness: clamp(num(c.friendliness, 50), 0, 100), affection: clamp(num(c.affection, 0), 0, 100),
+    notes: Array.isArray(c.notes) ? c.notes.map(n => typeof n === 'string' ? { turn, text: n } : n) : [],
+    firstTurn: turn, lastTurn: turn,
+  };
+}
+function newSave(script, statValues, persona, saveName, opts = {}) {
+  const stats = {};
+  for (const st of script.stats) stats[st.key] = st.type === 'number' ? num(st.initial, 0) : str(statValues[st.key] ?? st.initial);
+  const state = {
+    turn: 0, stage: script.stage || '', stats, persona: str(persona),
+    characters: script.characters.map(c => makeCharacter(c, 0)),
+    events: [], objectives: script.objectives.map(o => ({ id: uid(), title: str(o.title), description: str(o.description), status: o.status || 'active', progress: clamp(num(o.progress, 0), 0, 100), turn: 0 })),
+    items: script.items.map(i => ({ name: str(i.name), desc: str(i.desc), count: Math.max(1, num(i.count, 1)) })),
+    memory: '', summarizedUpTo: -1, playInstruction: '',
+    length: opts.length || S.length, pace: opts.pace || S.pace,
+    style: opts.style || null,                       // {id,name,text}
+    profileId: opts.profileId || S.defaultProfile,   // 故事口味方案
+    profileSnapshot: null, useGlobalPrefs: opts.useGlobalPrefs !== false,
+  };
+  const pf = S.profiles.find(p => p.id === state.profileId); if (pf) state.profileSnapshot = clone(pf);
+  return {
+    id: 'save-' + uid(), v: APP_VERSION, scriptId: script.id, script: clone(script),
+    name: saveName || `${script.title} · ${stats.name || '无名'}`,
+    createdAt: Date.now(), updatedAt: Date.now(), state, log: [], snapshots: [],
+    usage: { prompt: 0, completion: 0, cached: 0, calls: 0 },
+  };
+}
+function migrateSave(save) {
+  const st = save.state;
+  st.length = st.length || S.length; st.pace = st.pace || S.pace;
+  if (st.useGlobalPrefs === undefined) st.useGlobalPrefs = true;
+  if (st.profileId === undefined) st.profileId = S.defaultProfile;
+  if (st.style === undefined) st.style = save.script.style ? { id: 'script', name: '剧本默认文风', text: save.script.style } : null;
+  for (const c of st.characters) { c.traits = c.traits || []; c.motive = c.motive || ''; c.backstory = c.backstory || ''; c.secret = c.secret || ''; }
+  return save;
+}
+async function persist(save) { save.updatedAt = Date.now(); await DB.put('saves', save); }
+const playerName = save => str(save.state.stats.name) || '你';
+
+/* ---------------- 上下文拼装 ---------------- */
+const IMPORTANCE_ORDER = { major: 0, supporting: 1, minor: 2 };
+const IMPORTANCE_TEXT = { major: '主要', supporting: '次要', minor: '路人' };
+
+function globalPrefsText(save) {
+  if (save.state.useGlobalPrefs === false) return '';
+  const P = S.prefs || DEFAULT_PREFS;
+  const lines = PREF_RULES.filter(r => P[r.key]).map(r => '- ' + r.text);
+  if (str(P.extra)) lines.push('- ' + str(P.extra));
+  return lines.join('\n');
+}
+function buildSystemPrompt(save) {
+  const sc = save.script, st = save.state, L = sc.relationLabels;
+  const statKeys = sc.stats.map(x => `${x.key}（${x.label}，${x.type === 'number' ? '数值' + (x.max !== undefined ? `，范围 ${x.min ?? 0}～${x.max}` : '') : '文本'}）`).join('、');
+  const prefs = globalPrefsText(save);
+  const prof = resolveProfile(save);
+  const style = resolveStyle(save);
+  return `你是一款中文互动文字冒险游戏的叙事引擎，同时担任故事的主持人。玩家扮演主角「${playerName(save)}」，你负责描写世界、扮演所有其他人物，并根据玩家的行动推进剧情。
+
+【通用原则】（与剧本规则冲突时，以剧本规则为准）
+1. 用第二人称“你”指代主角。只执行玩家本回合明确写出的行动与台词；不替主角做重大决定，不替主角补充额外台词，不替主角下内心结论。玩家输入的如果是一大段计划，只推进到第一个会产生变数的节点。
+2. 严格遵守【剧本设定】【人物卡】【关键事件】【剧情摘要】中已确立的事实，前后不矛盾。已死亡或已离场的人物不会无故出现。
+3. 人物依照自身的性格、立场、动机与过往行动，态度随经历逐步变化，不会无故对主角产生好感，也不会全都围着主角转。人物之间也有各自的关系与互动。
+4. 篇幅与节奏按每回合末尾【本回合的篇幅与节奏】的要求执行。每回合以一个需要玩家作出选择或回应的时刻收尾，不要写成结局式的总结。
+5. 文字要求：用具体的动作、对白、环境细节推进；避免空泛抒情、排比堆砌和结尾的感悟式总结；不使用 markdown 标题、列表或加粗。对白用中文引号“”。
+6. 人物卡里标注“主角尚不知道”的内容（立场与动机、过往经历、秘密）是人物言行的依据，只能通过剧情自然透露，不能由旁白直接告诉玩家。
+7. 当主角在本回合通过亲眼所见、对方亲口讲述、可靠的证据或合理推理，真正了解到某个人物的一段过往、真实动机或秘密时，在该人物的 "reveal" 中记下一条词条。词条内容必须与该人物的隐藏设定一致；隐藏设定为空时可以合理创造，并同时用 "inner" 补全。已经揭示过的词条不要重复记录。揭示应当稀少而有分量，通常很多回合才有一次。
+${prefs ? `\n【玩家的基础偏好】（适用于所有剧本；与剧本明确的设定冲突时以剧本为准，其余情况始终遵守）\n${prefs}\n` : ''}${prof ? `\n【本局的故事口味：${prof.name}】（决定剧情的重心与走向，在不违背剧本设定的前提下遵守）\n${profileText(prof)}\n` : ''}
+【剧本：${sc.title}】
+${sc.world}
+${sc.rules ? `\n【剧本规则】\n${sc.rules}\n` : ''}${style ? `\n【文风：${style.name}】\n${style.text}\n` : ''}${S.globalStyle ? `\n【玩家的写作习惯要求】\n${S.globalStyle}\n` : ''}
+【输出格式】（必须严格遵守）
+先直接输出本回合的剧情正文（纯文本，可分多段）。
+正文写完后，另起一行只写 ${STATE_MARK}，再输出一个 JSON 对象（不要用代码块包裹），记录本回合造成的状态变化。字段如下，没有变化的字段一律省略：
+{
+  "stage": "新的阶段标签（时间 · 地点），有变化才写",
+  "stats": {"属性key": 数值属性写变化量（如 5 或 -3，不写加号），文本属性写新的完整文本},
+  "characters": [
+    {"name": "已有人物名", "friendliness": 变化量, "affection": 变化量, "opinion": "此刻对主角的看法（一句话）", "relation": "新的关系标签", "status": "在世/离开/受伤/死亡等", "note": "本回合此人与主角之间值得长期记住的事（一句话）", "inner": {"motive": "立场与动机", "backstory": "过往经历（性格的来源）", "secret": "秘密"}, "reveal": [{"title": "词条名，8字以内", "text": "主角了解到的内容，60字以内"}]},
+    {"name": "首次登场的人物", "new": true, "identity": "身份", "appearance": "外貌", "personality": "性格", "relation": "与主角的关系", "brief": "一句话简介", "opinion": "对主角的看法", "friendliness": 0到100的初始值, "affection": 0到100的初始值, "importance": "major/supporting/minor", "motive": "立场与动机（主角尚不知道）", "backstory": "过往经历，性格的来源（主角尚不知道）", "secret": "秘密（可省略）"}
+  ],
+  "events": [{"title": "15字以内", "description": "60字以内", "characters": ["相关人物"], "consequence": "可能带来的后续影响", "weight": "major或minor"}],
+  "resolved": ["本回合已经了结的关键事件标题"],
+  "objectives": [{"title": "目标标题", "status": "active/completed/failed", "progress": 0到100, "description": "新增目标时填写"}],
+  "items": {"add": [{"name": "", "desc": "", "count": 1}], "remove": [{"name": "", "count": 1}]},
+  "choices": ["3～4 个下一步可选行动，每个不超过 25 字，方向各不相同"]
+}
+说明：可用的属性 key 有 ${statKeys}。${L.friendliness}（friendliness）表示信任与亲近，${L.affection}（affection）表示心动与恋慕，两者互相独立，范围都是 0～100，每回合变化一般不超过 ±10。只有会影响后续剧情的转折才记为 events，通常每回合 0～2 条。有名有姓、可能再次出现的人物首次登场时，用 "new": true 建卡，并为主要和次要人物写好 motive 与 backstory。"inner" 只在该人物对应的隐藏设定为空时补写。choices 必须提供。`;
+}
+
+function fmtCharacter(c, L, brief) {
+  const head = `◆ ${c.name}${c.aliases?.length ? `（又名${c.aliases.join('、')}）` : ''}｜${c.identity || '身份不明'}｜与主角：${c.relation || '—'}｜${L.friendliness} ${Math.round(c.friendliness)} · ${L.affection} ${Math.round(c.affection)}｜${c.status || '在世'}`;
+  if (brief) return head + (c.brief ? `\n  ${c.brief}` : '');
+  const lines = [head];
+  if (c.personality) lines.push(`  性格：${c.personality}`);
+  if (c.appearance) lines.push(`  外貌：${c.appearance}`);
+  if (c.brief) lines.push(`  简介：${c.brief}`);
+  if (c.opinion) lines.push(`  对主角的看法：${c.opinion}`);
+  const notes = (c.notes || []).slice(-8);
+  if (notes.length) lines.push(`  与主角的往事：${notes.map(n => `[第${n.turn}回合]${n.text}`).join('；')}`);
+  const traits = c.traits || [];
+  if (traits.length) lines.push(`  主角已了解的词条：${traits.map(t => `【${t.title}】${t.text}`).join('；')}`);
+  const hid = [];
+  if (c.motive) hid.push(`立场与动机：${c.motive}`);
+  if (c.backstory) hid.push(`过往经历：${c.backstory}`);
+  if (c.secret) hid.push(`秘密：${c.secret}`);
+  if (hid.length) lines.push(`  〔隐藏设定，主角尚不知道${traits.length ? '（已揭示的部分见上方词条）' : ''}〕${hid.join('；')}`);
+  else lines.push('  〔隐藏设定尚未确立，此人有重要戏份时用 inner 补全〕');
+  return lines.join('\n');
+}
+
+function contextTurns(save) {
+  const st = save.state;
+  const done = save.log.filter(e => e.turn <= st.turn);
+  const unsummarized = done.filter(e => e.turn > st.summarizedUpTo);
+  const n = Math.max(S.recentTurns, unsummarized.length);
+  return done.slice(-Math.min(n, S.recentTurns + S.summaryInterval * 3));
+}
+function buildUserPrompt(save, action) {
+  const sc = save.script, st = save.state, L = sc.relationLabels;
+  const parts = [];
+  // 状态
+  const statLines = sc.stats.map(x => {
+    const v = st.stats[x.key];
+    if (x.type === 'number') return `${x.label} ${Math.round(num(v))}${x.max !== undefined ? '/' + x.max : ''}`;
+    return `${x.label}：${str(v) || '—'}`;
+  });
+  parts.push(`【当前状态】第 ${st.turn + 1} 回合｜阶段：${st.stage || '未标注'}\n主角 ${statLines.join('｜')}`);
+  if (st.persona) parts.push(`【主角人设】\n${st.persona}`);
+  // 人物
+  const recentCut = st.turn - 10;
+  const chars = [...st.characters].sort((a, b) => (IMPORTANCE_ORDER[a.importance] - IMPORTANCE_ORDER[b.importance]) || (b.lastTurn - a.lastTurn));
+  if (chars.length) parts.push(`【人物卡】\n${chars.map(c => fmtCharacter(c, L, c.importance === 'minor' && c.lastTurn < recentCut)).join('\n')}`);
+  // 背包与目标
+  if (st.items.length) parts.push(`【物品】${st.items.map(i => `${i.name}${i.count > 1 ? '×' + i.count : ''}${i.desc ? `（${i.desc}）` : ''}`).join('；')}`);
+  const objs = st.objectives.filter(o => o.status === 'active');
+  const objDone = st.objectives.filter(o => o.status !== 'active').slice(-5);
+  if (objs.length || objDone.length) parts.push(`【目标】\n${objs.map(o => `- ${o.title}（进度 ${o.progress}%）${o.description ? '：' + o.description : ''}`).join('\n')}${objDone.length ? `\n已结束：${objDone.map(o => `${o.title}（${o.status === 'completed' ? '完成' : '失败'}）`).join('、')}` : ''}`);
+  // 关键事件
+  const open = st.events.filter(e => !e.resolved);
+  const closed = st.events.filter(e => e.resolved);
+  const closedShown = closed.slice(-12);
+  const closedHidden = closed.length - closedShown.length;
+  if (st.events.length) {
+    const fe = e => `- [第${e.turn}回合]${e.weight === 'major' ? '【重大】' : ''}${e.title}：${e.description || ''}${e.characters?.length ? `（涉及：${e.characters.join('、')}）` : ''}${e.consequence ? `→ ${e.consequence}` : ''}`;
+    parts.push(`【关键事件 · 未了结】\n${open.length ? open.map(fe).join('\n') : '（无）'}${closedShown.length ? `\n【关键事件 · 已了结】${closedHidden > 0 ? `（更早的 ${closedHidden} 条见剧情摘要）` : ''}\n${closedShown.map(fe).join('\n')}` : ''}`);
+  }
+  if (st.memory) parts.push(`【剧情摘要（更早的剧情）】\n${st.memory}`);
+  const turns = contextTurns(save);
+  if (turns.length) parts.push(`【最近的剧情原文】\n${turns.map(e => `〔第${e.turn}回合〕${e.action ? `\n玩家行动：${e.action}` : ''}\n${e.narrative}`).join('\n\n')}`);
+  if (st.playInstruction) parts.push(`【玩家对接下来剧情的额外要求】\n${st.playInstruction}`);
+  parts.push(`【本回合玩家行动】\n${action}`);
+  parts.push(paceBlock(st) + `\n\n请续写本回合剧情，然后另起一行输出 ${STATE_MARK} 和状态 JSON。`);
+  return parts.join('\n\n');
+}
+
+/* ---------------- API ---------------- */
+function apiBody(extra) {
+  const b = { model: S.model, temperature: Number(S.temperature), max_tokens: Number(S.maxTokens), ...extra };
+  if (S.disableThinking) b.thinking = { type: 'disabled' };
+  return b;
+}
+function apiUrl() { return S.baseUrl.replace(/\/+$/, '').replace(/\/chat\/completions$/, '') + '/chat/completions'; }
+async function apiError(res) {
+  let msg = `HTTP ${res.status}`;
+  try { const t = await res.text(); const j = JSON.parse(t); msg += '：' + (j.error?.message || j.message || t.slice(0, 200)); } catch {}
+  if (res.status === 401) msg += '\n（密钥无效，请到设置里检查）';
+  if (res.status === 402) msg += '\n（账户余额不足）';
+  if (res.status === 429) msg += '\n（请求太频繁，稍等再试）';
+  return new Error(msg);
+}
+function addUsage(save, u) {
+  if (!u) return;
+  const p = u.prompt_tokens || 0, c = u.completion_tokens || 0, k = u.prompt_cache_hit_tokens || u.prompt_tokens_details?.cached_tokens || 0;
+  for (const tgt of [S.usage, save && save.usage]) if (tgt) { tgt.prompt += p; tgt.completion += c; tgt.cached += k; tgt.calls += 1; }
+}
+async function chatStream(messages, { onText, onThinking, signal }) {
+  if (!S.apiKey) throw new Error('还没有填写 API 密钥，请先到设置里填写。');
+  const res = await fetch(apiUrl(), {
+    method: 'POST', signal,
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + S.apiKey },
+    body: JSON.stringify(apiBody({ messages, stream: true, stream_options: { include_usage: true } })),
+  });
+  if (!res.ok) throw await apiError(res);
+  const reader = res.body.getReader(), dec = new TextDecoder();
+  let buf = '', text = '', usage = null;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let i;
+    while ((i = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+      if (!line.startsWith('data:')) continue;
+      const data = line.slice(5).trim();
+      if (!data || data === '[DONE]') continue;
+      let j; try { j = JSON.parse(data); } catch { continue; }
+      if (j.error) throw new Error(j.error.message || '接口返回错误');
+      const d = j.choices?.[0]?.delta;
+      if (d?.content) { text += d.content; onText && onText(text); }
+      else if (d?.reasoning_content) onThinking && onThinking();
+      if (j.usage) usage = j.usage;
+    }
+  }
+  return { text, usage };
+}
+async function chatOnce(messages, opts = {}) {
+  if (!S.apiKey) throw new Error('还没有填写 API 密钥。');
+  const res = await fetch(apiUrl(), {
+    method: 'POST', signal: opts.signal,
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + S.apiKey },
+    body: JSON.stringify(apiBody({ messages, stream: false, temperature: opts.temperature ?? 0.4, max_tokens: opts.maxTokens ?? 2500 })),
+  });
+  if (!res.ok) throw await apiError(res);
+  const j = await res.json();
+  return { text: j.choices?.[0]?.message?.content || '', usage: j.usage };
+}
+
+/* ---------------- 解析与合并 ---------------- */
+function visibleNarrative(text) {
+  const i = text.indexOf(STATE_MARK);
+  if (i >= 0) return text.slice(0, i);
+  // 流式时隐藏可能是标记开头的尾巴
+  for (let k = Math.min(STATE_MARK.length - 1, text.length); k > 0; k--) if (STATE_MARK.startsWith(text.slice(-k))) return text.slice(0, -k);
+  return text;
+}
+function parseLooseJSON(s) {
+  if (!s) return null;
+  let t = s.replace(/```(?:json)?/gi, '').trim();
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a < 0 || b <= a) return null;
+  t = t.slice(a, b + 1);
+  const tries = [
+    x => x,
+    x => x.replace(/,\s*([}\]])/g, '$1'),
+    x => x.replace(/,\s*([}\]])/g, '$1').replace(/:\s*\+(\d)/g, ': $1').replace(/[“”]/g, '"').replace(/\/\/[^\n]*/g, ''),
+  ];
+  for (const f of tries) { try { return JSON.parse(f(t)); } catch {} }
+  return null;
+}
+function splitOutput(text) {
+  const i = text.indexOf(STATE_MARK);
+  if (i < 0) {
+    // 容错：模型忘了标记但在末尾给了 JSON
+    const m = text.match(/\n\s*(```json)?\s*(\{[\s\S]*"choices"[\s\S]*\})\s*(```)?\s*$/);
+    if (m) return { narrative: text.slice(0, m.index).trim(), delta: parseLooseJSON(m[2]), hadMark: false };
+    return { narrative: text.trim(), delta: null, hadMark: false };
+  }
+  return { narrative: text.slice(0, i).trim(), delta: parseLooseJSON(text.slice(i + STATE_MARK.length)), hadMark: true };
+}
+function findChar(list, name) {
+  const n = str(name); if (!n) return null;
+  return list.find(c => c.name === n) || list.find(c => (c.aliases || []).includes(n)) || null;
+}
+function applyReveal(c, reveal, turn, chips) {
+  if (!reveal) return;
+  const list = Array.isArray(reveal) ? reveal : [reveal];
+  c.traits = c.traits || [];
+  for (const r of list) {
+    const title = str(typeof r === 'string' ? r : r && r.title).slice(0, 16), text = str(r && r.text);
+    if (!title) continue;
+    if (c.traits.find(t => t.title === title)) continue;
+    c.traits.push({ id: uid(), title, text, turn });
+    chips.push({ t: `发现 ${c.name}：${title}`, c: 'rv' });
+  }
+}
+function applyDelta(save, delta, turn) {
+  const sc = save.script, st = save.state, L = sc.relationLabels, chips = [];
+  if (!delta || typeof delta !== 'object') return chips;
+  // 阶段
+  if (str(delta.stage) && str(delta.stage) !== st.stage) st.stage = str(delta.stage);
+  // 属性
+  if (delta.stats && typeof delta.stats === 'object') {
+    for (const [k, v] of Object.entries(delta.stats)) {
+      const def = sc.stats.find(x => x.key === k || x.label === k);
+      if (!def) continue;
+      if (def.type === 'number') {
+        const d = num(v, 0); if (!d) continue;
+        const before = num(st.stats[def.key]);
+        const after = clamp(before + d, def.min ?? (def.max !== undefined ? 0 : -Infinity), def.max);
+        st.stats[def.key] = after;
+        const real = Math.round(after - before);
+        if (real) chips.push({ t: `${def.label} ${real > 0 ? '+' : ''}${real}`, c: real > 0 ? 'up' : 'down' });
+      } else if (str(v) && str(v) !== str(st.stats[def.key])) {
+        st.stats[def.key] = str(v); chips.push({ t: `${def.label}：${str(v)}` });
+      }
+    }
+  }
+  // 人物
+  if (Array.isArray(delta.characters)) {
+    for (const cd of delta.characters) {
+      if (!cd || !str(cd.name)) continue;
+      if (str(cd.name) === playerName(save)) continue;
+      let c = findChar(st.characters, cd.name);
+      if (!c) {
+        if (!cd.new && !cd.identity && !cd.brief && !cd.personality) continue;
+        const inner = cd.inner && typeof cd.inner === 'object' ? cd.inner : {};
+        c = makeCharacter({ ...cd, motive: cd.motive || inner.motive, backstory: cd.backstory || inner.backstory, secret: cd.secret || inner.secret, traits: [], friendliness: cd.friendliness ?? 50, affection: cd.affection ?? 0 }, turn);
+        if (cd.note) c.notes.push({ turn, text: str(cd.note) });
+        applyReveal(c, cd.reveal, turn, chips);
+        st.characters.push(c);
+        chips.push({ t: `结识 ${c.name}`, c: 'ch' });
+        continue;
+      }
+      if (cd.new) { // 已存在却标记为新：当作补充信息
+        for (const f of ['identity', 'appearance', 'personality', 'brief']) if (!c[f] && str(cd[f])) c[f] = str(cd[f]);
+      }
+      for (const [f, lab, cls] of [['friendliness', L.friendliness, ''], ['affection', L.affection, 'af']]) {
+        if (cd[f] === undefined || cd.new) continue;
+        const d = num(cd[f], 0); if (!d) continue;
+        const before = c[f]; c[f] = clamp(before + d, 0, 100);
+        const real = Math.round(c[f] - before);
+        if (real) chips.push({ t: `${c.name} ${lab}${real > 0 ? '+' : ''}${real}`, c: cls || (real > 0 ? 'up' : 'down') });
+      }
+      for (const f of ['opinion', 'relation', 'status', 'identity', 'appearance']) if (str(cd[f])) c[f] = str(cd[f]);
+      if (['major', 'supporting', 'minor'].includes(cd.importance)) c.importance = cd.importance;
+      if (str(cd.note)) c.notes.push({ turn, text: str(cd.note) });
+      const inner = cd.inner && typeof cd.inner === 'object' ? cd.inner : {};
+      for (const f of ['motive', 'backstory', 'secret']) { const v = str(inner[f] || (cd.new ? cd[f] : '')); if (v && !c[f]) c[f] = v; }
+      applyReveal(c, cd.reveal, turn, chips);
+      c.lastTurn = turn;
+    }
+  }
+  // 事件
+  if (Array.isArray(delta.events)) {
+    for (const e of delta.events) {
+      if (!e || !str(e.title)) continue;
+      if (st.events.find(x => x.title === str(e.title) && !x.resolved)) continue;
+      st.events.push({ id: uid(), turn, title: str(e.title), description: str(e.description), characters: Array.isArray(e.characters) ? e.characters.map(str).filter(Boolean) : [], consequence: str(e.consequence), weight: e.weight === 'major' ? 'major' : 'minor', resolved: false });
+      chips.push({ t: `事件：${str(e.title)}`, c: 'ev' });
+    }
+  }
+  if (Array.isArray(delta.resolved)) {
+    for (const r of delta.resolved) {
+      const t = str(r); if (!t) continue;
+      const ev = st.events.find(x => !x.resolved && x.title === t) || st.events.find(x => !x.resolved && (x.title.includes(t) || t.includes(x.title)));
+      if (ev) { ev.resolved = true; ev.resolvedTurn = turn; chips.push({ t: `了结：${ev.title}` }); }
+    }
+  }
+  // 目标
+  if (Array.isArray(delta.objectives)) {
+    for (const o of delta.objectives) {
+      if (!o || !str(o.title)) continue;
+      let ob = st.objectives.find(x => x.title === str(o.title)) || st.objectives.find(x => x.title.includes(str(o.title)) || str(o.title).includes(x.title));
+      if (!ob) {
+        ob = { id: uid(), title: str(o.title), description: str(o.description), status: 'active', progress: 0, turn };
+        st.objectives.push(ob); chips.push({ t: `新目标：${ob.title}`, c: 'ch' });
+      }
+      if (o.progress !== undefined) ob.progress = clamp(num(o.progress, ob.progress), 0, 100);
+      if (str(o.description) && !ob.description) ob.description = str(o.description);
+      if (['completed', 'failed', 'active'].includes(o.status) && o.status !== ob.status) {
+        ob.status = o.status;
+        if (o.status === 'completed') { ob.progress = 100; chips.push({ t: `完成：${ob.title}`, c: 'up' }); }
+        if (o.status === 'failed') chips.push({ t: `失败：${ob.title}`, c: 'down' });
+      }
+    }
+  }
+  // 物品
+  if (delta.items && typeof delta.items === 'object') {
+    for (const it of (Array.isArray(delta.items.add) ? delta.items.add : [])) {
+      if (!it || !str(it.name)) continue;
+      const cnt = Math.max(1, num(it.count, 1));
+      const ex = st.items.find(x => x.name === str(it.name));
+      if (ex) { ex.count += cnt; if (str(it.desc)) ex.desc = str(it.desc); } else st.items.push({ name: str(it.name), desc: str(it.desc), count: cnt });
+      chips.push({ t: `获得 ${str(it.name)}${cnt > 1 ? '×' + cnt : ''}`, c: 'up' });
+    }
+    for (const it of (Array.isArray(delta.items.remove) ? delta.items.remove : [])) {
+      const name = typeof it === 'string' ? it : str(it && it.name); if (!name) continue;
+      const ex = st.items.find(x => x.name === name); if (!ex) continue;
+      ex.count -= Math.max(1, num(it && it.count, 1));
+      if (ex.count <= 0) st.items.splice(st.items.indexOf(ex), 1);
+      chips.push({ t: `失去 ${name}`, c: 'down' });
+    }
+  }
+  return chips;
+}
+
+/* ---------------- 游戏循环 ---------------- */
+const G = { save: null, busy: false, abort: null, stream: null, error: null, summarizing: false };
+
+function pushSnapshot(save, turn) {
+  const snap = clone(save.state);
+  save.snapshots = (save.snapshots || []).filter(s => s.turn < turn);
+  save.snapshots.push({ turn, state: snap, logLen: save.log.length });
+  const lim = Math.max(1, S.snapshotLimit | 0);
+  if (save.snapshots.length > lim) save.snapshots = save.snapshots.slice(-lim);
+}
+
+async function playTurn(action) {
+  const save = G.save;
+  if (!save || G.busy) return;
+  action = str(action);
+  if (!action) return;
+  G.busy = true; G.error = null;
+  const turn = save.state.turn + 1;
+  G.stream = { action, text: '', thinking: false };
+  renderLog(); setComposerBusy(true); scrollLogToEnd(true);
+  const messages = [{ role: 'system', content: buildSystemPrompt(save) }, { role: 'user', content: buildUserPrompt(save, action) }];
+  G.abort = new AbortController();
+  let result;
+  try {
+    result = await chatStream(messages, {
+      signal: G.abort.signal,
+      onText: t => { G.stream.text = t; G.stream.thinking = false; updateStreamView(); },
+      onThinking: () => { if (!G.stream.thinking) { G.stream.thinking = true; updateStreamView(); } },
+    });
+  } catch (e) {
+    const aborted = e.name === 'AbortError';
+    G.busy = false; G.abort = null;
+    const partial = G.stream?.text || '';
+    G.stream = null;
+    if (aborted) {
+      $('#action').value = action;
+      toast(partial ? '已停止，本回合没有保存' : '已停止');
+    } else {
+      G.error = { message: e.message || String(e), action };
+    }
+    renderLog(); setComposerBusy(false); scrollLogToEnd();
+    return;
+  }
+  addUsage(save, result.usage);
+  const { narrative, delta, hadMark } = splitOutput(result.text);
+  if (!narrative) {
+    G.busy = false; G.stream = null; G.error = { message: 'AI 没有返回剧情内容，可以重试。', action };
+    renderLog(); setComposerBusy(false); await saveSettings(); return;
+  }
+  pushSnapshot(save, turn);
+  const chips = applyDelta(save, delta, turn);
+  const warns = [];
+  if (!delta) warns.push(hadMark ? '状态更新的格式有误，本回合属性和人物没有变化。' : 'AI 没有按格式返回状态更新，本回合属性和人物没有变化。');
+  const choices = Array.isArray(delta?.choices) ? delta.choices.map(str).filter(Boolean).slice(0, 5) : [];
+  save.state.turn = turn;
+  save.log.push({ id: uid(), turn, action, narrative, choices, chips, warns, at: Date.now() });
+  G.busy = false; G.stream = null; G.abort = null;
+  await persist(save); await saveSettings();
+  renderLog(); renderGameHeader(); setComposerBusy(false); scrollToEntryStart();
+  maybeSummarize();
+}
+
+function needSummary(save) {
+  const st = save.state;
+  const unsum = save.log.filter(e => e.turn > st.summarizedUpTo && e.turn <= st.turn).length;
+  return unsum >= S.recentTurns + S.summaryInterval;
+}
+async function maybeSummarize(force = false) {
+  const save = G.save;
+  if (!save || G.summarizing) return;
+  if (!force && !needSummary(save)) return;
+  const st = save.state;
+  const pending = save.log.filter(e => e.turn > st.summarizedUpTo && e.turn <= st.turn);
+  const keep = force ? 0 : S.recentTurns;
+  const target = pending.slice(0, Math.max(0, pending.length - keep));
+  if (!target.length) { if (force) toast('没有需要总结的新剧情'); return; }
+  const upTo = target[target.length - 1].turn, upToId = target[target.length - 1].id, saveId = save.id;
+  G.summarizing = true; renderGameHeader();
+  try {
+    const text = await summarizeTurns(save, target);
+    const cur = G.save;
+    const still = cur && cur.id === saveId && cur.log.find(e => e.turn === upTo)?.id === upToId && cur.state.summarizedUpTo < upTo;
+    if (still && text) {
+      cur.state.memory = text; cur.state.summarizedUpTo = upTo; cur.state.memoryAt = Date.now();
+      await persist(cur); await saveSettings();
+      if (force) toast('剧情摘要已更新');
+      if (!$('#sheet').hidden && sheetTab === 'memory') renderSheet();
+    }
+  } catch (e) {
+    console.warn('摘要失败', e);
+    if (force) toast('摘要失败：' + (e.message || e).toString().slice(0, 60));
+  } finally { G.summarizing = false; renderGameHeader(); }
+}
+async function summarizeTurns(save, entries) {
+  const st = save.state, sc = save.script;
+  const chars = st.characters.map(c => `${c.name}（${c.relation || c.identity || ''}，${sc.relationLabels.friendliness}${Math.round(c.friendliness)}/${sc.relationLabels.affection}${Math.round(c.affection)}，${c.status}）`).join('、');
+  const evs = st.events.map(e => `${e.resolved ? '[已了结]' : '[未了结]'}${e.title}`).join('；');
+  const messages = [
+    { role: 'system', content: '你是长篇互动小说的剧情记录员，负责维护一份“剧情摘要”，供作者续写时回顾前情。你只输出摘要正文。' },
+    { role: 'user', content: `剧本：${sc.title}　主角：${playerName(save)}
+
+【旧的剧情摘要】
+${st.memory || '（暂无，这是第一次总结）'}
+
+【需要并入摘要的新剧情】
+${entries.map(e => `〔第${e.turn}回合〕${e.action ? '玩家行动：' + e.action + '\n' : ''}${e.narrative}`).join('\n\n')}
+
+【参考：当前人物】${chars || '无'}
+【参考：关键事件】${evs || '无'}
+
+请把新剧情并入旧摘要，输出一份更新后的完整剧情摘要。要求：
+1. 按时间顺序，用“第X回合前后”标注大致位置；越早的剧情写得越概括，最近的写得具体一些。
+2. 必须保留：已经发生的重要事实与转折、人物之间的承诺、约定、欠下的人情、谎言与秘密（写明谁知道谁不知道）、埋下的伏笔、尚未解决的问题、主角做过的关键选择。
+3. 删去环境描写和修辞，只留事实。
+4. 最后单独一段写“当前局势”：主角此刻在哪、和谁在一起、正在做什么、面临什么。
+5. 总长度不超过 ${S.memoryMaxChars} 字。只输出摘要正文，不要任何前言。` },
+  ];
+  const r = await chatOnce(messages, { temperature: 0.3, maxTokens: Math.ceil(S.memoryMaxChars * 1.6) + 200 });
+  addUsage(save, r.usage);
+  return str(r.text).replace(/^```\w*\n?|```$/g, '').trim();
+}
+
+async function startOpening(save) {
+  const sc = save.script;
+  if (sc.opening) {
+    const nm = playerName(save);
+    save.log.push({ id: uid(), turn: 0, action: '', narrative: sc.opening.replaceAll('{name}', nm), choices: sc.openingChoices.map(c => c.replaceAll('{name}', nm)), chips: [], warns: [], at: Date.now() });
+    await persist(save); renderLog(); return;
+  }
+  // 无开场白：让 AI 写开场，算作第 0 回合
+  G.busy = true; G.stream = { action: '', text: '', thinking: false }; renderLog(); setComposerBusy(true);
+  G.abort = new AbortController();
+  const messages = [{ role: 'system', content: buildSystemPrompt(save) }, { role: 'user', content: buildUserPrompt(save, '（游戏开始。请写开场：交代主角此刻所处的场景与处境，引出第一个需要玩家做决定的时刻。）').replace(/第 1 回合/, '开场') }];
+  try {
+    const r = await chatStream(messages, { signal: G.abort.signal, onText: t => { G.stream.text = t; updateStreamView(); }, onThinking: () => {} });
+    addUsage(save, r.usage);
+    const { narrative, delta } = splitOutput(r.text);
+    const chips = applyDelta(save, delta, 0);
+    save.log.push({ id: uid(), turn: 0, action: '', narrative, choices: (delta?.choices || []).map(str).filter(Boolean), chips, warns: delta ? [] : ['开场没有返回状态更新。'], at: Date.now() });
+    await persist(save); await saveSettings();
+  } catch (e) {
+    if (e.name !== 'AbortError') G.error = { message: e.message, action: '__opening__' };
+  }
+  G.busy = false; G.stream = null; G.abort = null; renderLog(); setComposerBusy(false); renderGameHeader();
+}
+
+const PLAY_KEYS = ['length', 'pace', 'style', 'profileId', 'profileSnapshot', 'useGlobalPrefs', 'persona', 'playInstruction'];
+async function rollback(silent) {
+  const save = G.save; if (!save || G.busy) return false;
+  const turn = save.state.turn;
+  if (turn <= 0) { if (!silent) toast('已经是开场了'); return false; }
+  const snap = (save.snapshots || []).find(s => s.turn === turn);
+  if (!snap) { if (!silent) toast('没有这一回合的快照，无法回退'); return false; }
+  const last = save.log[save.log.length - 1];
+  // 玩法设置不随剧情回退
+  const keep = {}; for (const k of PLAY_KEYS) keep[k] = save.state[k];
+  save.state = Object.assign(clone(snap.state), keep);
+  save.log = save.log.filter(e => e.turn < turn);
+  save.snapshots = save.snapshots.filter(s => s.turn < turn);
+  G.error = null;
+  await persist(save);
+  renderLog(); renderGameHeader();
+  return last;
+}
+async function reroll() {
+  if (G.busy) return;
+  const last = await rollback(true);
+  if (!last) { toast('无法重新生成这一回合'); return; }
+  playTurn(last.action);
+}
+
+/* ---------------- 界面：视图切换 ---------------- */
+let viewStack = ['shelf'];
+function showView(name, push = true) {
+  for (const v of document.querySelectorAll('.view')) v.hidden = v.id !== 'v-' + name;
+  if (push) viewStack.push(name);
+}
+function back() {
+  viewStack.pop();
+  const prev = viewStack[viewStack.length - 1] || 'shelf';
+  if (prev === 'shelf') renderShelf();
+  if (prev === 'game') { renderLog(); renderGameHeader(); }
+  showView(prev, false);
+}
+document.addEventListener('click', e => { if (e.target.closest('[data-back]')) back(); });
+
+/* ---------------- 模态框 ---------------- */
+let modalResolve = null;
+function openModal({ title, body, actions }) {
+  return new Promise(res => {
+    modalResolve = res;
+    $('#modal-head').textContent = title || '';
+    const mb = $('#modal-body'); mb.innerHTML = ''; if (body) mb.append(body);
+    const mf = $('#modal-foot'); mf.innerHTML = '';
+    for (const a of actions || [{ label: '好', value: true, primary: true }]) {
+      mf.append(h('button', { class: 'btn' + (a.primary ? ' primary' : '') + (a.danger ? ' danger' : '') + (a.ghost ? ' ghost' : ''), onclick: async () => {
+        if (a.run) { const r = await a.run(); if (r === false) return; }
+        closeModal(a.value);
+      } }, a.label));
+    }
+    $('#modal-wrap').hidden = false;
+  });
+}
+function closeModal(v) { $('#modal-wrap').hidden = true; if (modalResolve) { const r = modalResolve; modalResolve = null; r(v); } }
+$('#modal-wrap').addEventListener('click', e => { if (e.target.id === 'modal-wrap') closeModal(undefined); });
+function ask(title, msg, okLabel = '确定', danger = false) {
+  return openModal({ title, body: msg ? h('p', { style: 'margin:4px 0 8px;line-height:1.7' }, msg) : null, actions: [{ label: '取消', value: false, ghost: true }, { label: okLabel, value: true, primary: !danger, danger }] });
+}
+/* 通用表单：fields = [{key,label,type,options,hint,rows,fold}]
+   type: text | textarea | number | select | checkbox | multi | section */
+function formModal(title, fields, values, { extra = [], okLabel = '保存', prefix = null } = {}) {
+  const body = h('div');
+  if (prefix) body.append(prefix);
+  const inputs = {}, folds = {};
+  const place = (f, el) => {
+    if (!f.fold) return body.append(el);
+    if (!folds[f.fold]) { folds[f.fold] = h('details', { class: 'fold' }, h('summary', {}, f.fold)); body.append(folds[f.fold]); }
+    folds[f.fold].append(el);
+  };
+  for (const f of fields) {
+    if (f.type === 'section') { place(f, h('div', { class: 'sec-h' }, f.label)); continue; }
+    if (f.type === 'checkbox') {
+      const inp = h('input', { type: 'checkbox', id: 'f-' + f.key }); inp.checked = !!values[f.key];
+      inputs[f.key] = inp; place(f, h('label', { class: 'check', for: 'f-' + f.key }, inp, h('span', {}, f.label, f.hint ? h('small', { class: 'muted', style: 'display:block' }, f.hint) : null))); continue;
+    }
+    if (f.type === 'multi') {
+      const cur = new Set(values[f.key] || []);
+      const boxes = f.options.map(([v, l, d]) => { const i = h('input', { type: 'checkbox', value: v }); i.checked = cur.has(v); return [i, h('label', {}, i, h('span', {}, l, d ? h('small', {}, d) : null))]; });
+      inputs[f.key] = { multi: boxes.map(b => b[0]) };
+      place(f, h('div', { class: 'field' }, h('label', {}, f.label), h('div', { class: 'multi' }, ...boxes.map(b => b[1])), f.hint ? h('div', { class: 'hint' }, f.hint) : null));
+      continue;
+    }
+    let inp;
+    if (f.type === 'textarea') inp = h('textarea', { id: 'f-' + f.key, rows: f.rows || 3, placeholder: f.placeholder || null });
+    else if (f.type === 'select') { inp = h('select', { id: 'f-' + f.key }); for (const [v, l] of f.options) inp.append(h('option', { value: v }, l)); }
+    else inp = h('input', { id: 'f-' + f.key, type: f.type === 'number' ? 'number' : 'text', inputmode: f.type === 'number' ? 'decimal' : null, placeholder: f.placeholder || null });
+    inp.value = values[f.key] ?? '';
+    inputs[f.key] = inp;
+    place(f, h('div', { class: 'field' }, h('label', { for: 'f-' + f.key }, f.label), inp, f.hint ? h('div', { class: 'hint' }, f.hint) : null));
+  }
+  const read = () => { const o = {}; for (const f of fields) { const i = inputs[f.key]; if (!i) continue; o[f.key] = f.type === 'checkbox' ? i.checked : f.type === 'multi' ? i.multi.filter(x => x.checked).map(x => x.value) : f.type === 'number' ? num(i.value, 0) : i.value; } return o; };
+  let out = null;
+  return openModal({ title, body, actions: [...extra.map(x => ({ ...x, run: x.run ? () => x.run(read()) : undefined })), { label: '取消', value: null, ghost: true }, { label: okLabel, value: 'ok', primary: true, run: () => { out = read(); } }] })
+    .then(v => v === 'ok' ? out : (v && v !== null ? v : null));
+}
+
+/* ---------------- 文风编辑器（AI 整理） ---------------- */
+async function refineStyle(input) {
+  const r = await chatOnce([
+    { role: 'system', content: '你是资深的中文小说编辑，擅长把读者对文风的喜好整理成可执行的写作要求。' },
+    { role: 'user', content: `下面是一位读者提供的材料，可能是一段他喜欢的文字样本，也可能是他对文风的描述，或两者都有：
+
+<<<
+${input}
+>>>
+
+请据此写一段“文风说明”，供 AI 写互动小说时遵守。要求：
+1. 150～300 字，用祈使句直接说明怎么写，例如“短句为主”“对白多用口语”。
+2. 覆盖：叙述腔调、句子长短与节奏、用词（文白、口语、专有词）、修辞的多少、对白风格、描写的侧重点、幽默或情绪的处理方式，以及需要避免的写法。
+3. 如果材料是文字样本，只提炼风格，不要照抄其中的情节、人名和句子。
+4. 注意：互动小说用第二人称“你”指代主角，文风说明不要要求改变人称。
+只输出文风说明正文。` },
+  ], { temperature: 0.5, maxTokens: 800 });
+  addUsage(G.save, r.usage);
+  return str(r.text);
+}
+/* 新建或编辑一个自定义文风，返回保存后的文风对象或 null */
+function styleEditor(existing) {
+  const name = h('input', { id: 'sty-name', placeholder: '例如：我喜欢的古早言情' }); name.value = existing?.name || '';
+  const src = h('textarea', { id: 'sty-src', rows: 6, placeholder: '粘贴一段你喜欢的文字，或者直接描述你想要的感觉，比如“像某某作家那样冷淡、幽默，对白很多”。' });
+  const out = h('textarea', { id: 'sty-out', rows: 8, placeholder: 'AI 整理后的文风说明会出现在这里，你也可以直接手写。' }); out.value = existing?.text || '';
+  const btn = h('button', { class: 'btn sm', onclick: async () => {
+    if (!str(src.value)) { toast('先在上面填一段文字或描述'); return; }
+    btn.disabled = true; btn.textContent = '整理中…';
+    try { out.value = await refineStyle(src.value); await saveSettings(); toast('整理好了，可以再改改'); }
+    catch (e) { toast('整理失败：' + String(e.message || e).slice(0, 60), 3500); }
+    btn.disabled = false; btn.textContent = '让 AI 整理成文风说明';
+  } }, '让 AI 整理成文风说明');
+  const body = h('div', {},
+    h('div', { class: 'field' }, h('label', { for: 'sty-name' }, '文风名称'), name),
+    h('div', { class: 'field' }, h('label', { for: 'sty-src' }, '素材（可选）'), src),
+    h('div', { class: 'row', style: 'margin:-4px 0 12px' }, btn),
+    h('div', { class: 'field' }, h('label', { for: 'sty-out' }, '文风说明（最终发给 AI 的内容）'), out));
+  let result = null;
+  return openModal({ title: existing ? '编辑文风' : '新建文风', body, actions: [
+    ...(existing ? [{ label: '删除', danger: true, value: 'del', run: async () => { if (!(await ask('删除文风', `删除「${existing.name}」？已经在用它的存档不受影响。`, '删除', true))) return false; S.customStyles = S.customStyles.filter(x => x.id !== existing.id); await saveSettings(); } }] : []),
+    { label: '取消', value: null, ghost: true },
+    { label: '保存到我的文风', primary: true, value: 'ok', run: async () => {
+      if (!str(name.value) || !str(out.value)) { toast('名称和文风说明都要填'); return false; }
+      if (existing) { existing.name = str(name.value); existing.text = str(out.value); result = existing; }
+      else { result = { id: uid(), name: str(name.value), text: str(out.value) }; S.customStyles.push(result); }
+      await saveSettings();
+    } },
+  ] }).then(v => v === 'ok' ? result : null);
+}
+
+/* ---------------- 口味方案编辑器 ---------------- */
+async function profileEditor(existing) {
+  const base = existing || { name: '新方案', focus: 'balance', intrigue: 'light', romance: ['slowburn'], intensity: 'ups', extra: '' };
+  const r = await formModal(existing ? '编辑口味方案' : '新建口味方案', [
+    { key: 'name', label: '方案名称' },
+    { key: 'focus', label: '故事重心', type: 'select', options: FOCUS_OPTS },
+    { key: 'intrigue', label: '权谋浓度', type: 'select', options: INTRIGUE_OPTS },
+    { key: 'romance', label: '感情线形态（可多选）', type: 'multi', options: ROMANCE_OPTS },
+    { key: 'intensity', label: '情绪强度', type: 'select', options: INTENSITY_OPTS },
+    { key: 'extra', label: '补充说明', type: 'textarea', rows: 4, placeholder: '用自己的话说说你想要什么样的故事，比如“最终目的就是让主角和男主们恨海情天”。' },
+  ], base, { extra: existing && S.profiles.length > 1 ? [{ label: '删除', danger: true, value: 'del' }] : [] });
+  if (r === 'del') {
+    if (!(await ask('删除方案', `删除「${existing.name}」？正在用它的存档会保留一份副本继续使用。`, '删除', true))) return null;
+    S.profiles = S.profiles.filter(p => p.id !== existing.id);
+    if (S.defaultProfile === existing.id) S.defaultProfile = S.profiles[0].id;
+    await saveSettings(); return 'deleted';
+  }
+  if (!r || !str(r.name)) return null;
+  const v = { name: str(r.name), focus: r.focus, intrigue: r.intrigue, romance: r.romance, intensity: r.intensity, extra: str(r.extra) };
+  let p;
+  if (existing) { Object.assign(existing, v); p = existing; } else { p = { id: 'p-' + uid(), ...v }; S.profiles.push(p); }
+  await saveSettings();
+  return p;
+}
+function selectEl(id, options, value) {
+  const el = h('select', { id });
+  for (const [v, l] of options) el.append(h('option', { value: v }, l));
+  el.value = value; return el;
+}
+
+/* ---------------- 书架 ---------------- */
+async function renderShelf() {
+  $('#key-warning').hidden = !!S.apiKey;
+  const saves = (await DB.all('saves')).sort((a, b) => b.updatedAt - a.updatedAt);
+  const sl = $('#save-list'); sl.innerHTML = '';
+  if (!saves.length) sl.append(h('div', { class: 'empty' }, '还没有存档。从下面选一个剧本开始。'));
+  for (const sv of saves) {
+    sl.append(h('div', { class: 'card save-item', onclick: () => openSave(sv.id) },
+      h('div', { class: 'turn-badge' }, `第${sv.state.turn}回`),
+      h('div', { class: 'meta' }, h('b', {}, sv.name), h('small', {}, `${sv.state.stage || sv.script.title} · ${fmtTime(sv.updatedAt)}`)),
+      h('button', { class: 'icon-btn', 'aria-label': '存档操作', onclick: e => { e.stopPropagation(); saveMenu(sv); } }, h('span', { style: 'font-size:20px;line-height:1;color:var(--muted)' }, '⋯'))));
+  }
+  const scripts = await listScripts();
+  const cl = $('#script-list'); cl.innerHTML = '';
+  for (const sc of scripts) {
+    cl.append(h('div', { class: 'card script-card' },
+      h('h3', {}, sc.title),
+      h('div', { class: 'tags' }, ...(sc.tags || []).map(t => h('span', { class: 'tag' }, t)), sc.builtin ? h('span', { class: 'tag' }, '内置') : null),
+      h('p', {}, sc.intro || ''),
+      h('div', { class: 'row' },
+        h('button', { class: 'btn primary sm', onclick: () => openSetup(sc.id) }, '开始新游戏'),
+        h('button', { class: 'btn sm', onclick: () => editScript(sc) }, '编辑'),
+        h('button', { class: 'btn sm ghost', onclick: () => download(`剧本-${sc.title}.json`, JSON.stringify(stripScript(sc), null, 2)) }, '导出'),
+        sc.builtin ? null : h('button', { class: 'btn sm ghost danger', onclick: async () => { if (await ask('删除剧本', `删除「${sc.title}」？已有的存档不受影响。`, '删除', true)) { await DB.del('scripts', sc.id); renderShelf(); } } }, '删除'))));
+  }
+}
+function stripScript(sc) { const o = clone(sc); delete o.builtin; delete o.updatedAt; return o; }
+async function saveMenu(sv) {
+  const v = await openModal({ title: sv.name, body: h('dl', { class: 'kv' }, h('dt', {}, '剧本'), h('dd', {}, sv.script.title), h('dt', {}, '回合'), h('dd', {}, String(sv.state.turn)), h('dt', {}, '创建'), h('dd', {}, fmtTime(sv.createdAt)), h('dt', {}, '用量'), h('dd', {}, `${sv.usage.calls} 次调用 · ${Math.round((sv.usage.prompt + sv.usage.completion) / 1000)}k tokens`)),
+    actions: [{ label: '删除', value: 'del', danger: true }, { label: '复制', value: 'dup' }, { label: '导出', value: 'exp' }, { label: '改名', value: 'ren' }, { label: '继续', value: 'open', primary: true }] });
+  if (v === 'open') openSave(sv.id);
+  if (v === 'exp') download(`存档-${sv.name}.json`, JSON.stringify(sv));
+  if (v === 'dup') { const c = clone(sv); c.id = 'save-' + uid(); c.name = sv.name + '（副本）'; await persist(c); renderShelf(); toast('已复制存档'); }
+  if (v === 'ren') { const r = await formModal('存档改名', [{ key: 'name', label: '名称' }], { name: sv.name }); if (r && str(r.name)) { sv.name = str(r.name); await DB.put('saves', sv); renderShelf(); } }
+  if (v === 'del' && await ask('删除存档', `删除「${sv.name}」？删除后无法恢复。`, '删除', true)) { await DB.del('saves', sv.id); renderShelf(); }
+}
+async function editScript(sc) {
+  const body = h('div');
+  const ta = h('textarea', { class: 'code', id: 'script-json', spellcheck: 'false' });
+  ta.value = JSON.stringify(stripScript(sc), null, 2);
+  body.append(h('p', { class: 'small muted', style: 'margin:0 0 8px' }, sc.builtin ? '这是内置剧本，保存后会生成你自己的版本。改剧本不会影响已经开始的存档。' : '改剧本不会影响已经开始的存档（存档里保存着开局时的剧本副本）。'), ta);
+  await openModal({ title: '编辑剧本', body, actions: [{ label: '取消', value: null, ghost: true }, { label: '保存', primary: true, value: 'ok', run: async () => {
+    let raw; try { raw = JSON.parse(ta.value); } catch (e) { toast('JSON 格式有误：' + e.message.slice(0, 50), 3500); return false; }
+    const r = normalizeScript(raw);
+    if (!r.ok) { toast(r.errors.join('；'), 3500); return false; }
+    r.script.updatedAt = Date.now();
+    await DB.put('scripts', r.script); renderShelf(); toast('剧本已保存');
+  } }] });
+}
+$('#btn-new-script').onclick = () => { const t = clone(SCRIPT_TEMPLATE); t.id = 'custom-' + uid(); editScript(t); };
+$('#btn-import-script').onclick = async () => {
+  const text = await pickFile(); if (!text) return;
+  let raw; try { raw = JSON.parse(text); } catch { toast('文件不是有效的 JSON'); return; }
+  const r = normalizeScript(raw);
+  if (!r.ok) { toast('剧本有问题：' + r.errors.join('；'), 3500); return; }
+  const exists = await getScript(r.script.id);
+  if (exists && !exists.builtin && !(await ask('覆盖剧本', `已经有一个同 id 的剧本「${exists.title}」，要覆盖吗？`, '覆盖'))) return;
+  r.script.updatedAt = Date.now();
+  await DB.put('scripts', r.script); renderShelf(); toast(`已导入「${r.script.title}」`);
+};
+$('#btn-import-save').onclick = async () => {
+  const text = await pickFile(); if (!text) return;
+  let sv; try { sv = JSON.parse(text); } catch { toast('文件不是有效的 JSON'); return; }
+  if (!sv || !sv.state || !sv.script || !Array.isArray(sv.log)) { toast('这不是存档文件'); return; }
+  if (await DB.get('saves', sv.id)) sv.id = 'save-' + uid();
+  sv.usage = sv.usage || { prompt: 0, completion: 0, cached: 0, calls: 0 };
+  await persist(sv); renderShelf(); toast('存档已导入');
+};
+
+/* ---------------- 开局 ---------------- */
+async function openSetup(scriptId) {
+  const sc = await getScript(scriptId); if (!sc) return;
+  const n = normalizeScript(sc); const script = n.script; script.id = sc.id;
+  $('#setup-title').textContent = script.title;
+  const body = $('#setup-body'); body.innerHTML = '';
+  body.append(h('p', { class: 'setup-intro' }, script.intro || ''));
+  body.append(h('div', { class: 'sec-h' }, '你的角色'));
+  const inputs = {};
+  for (const st of script.stats.filter(x => x.type === 'text' && (x.ask || x.key === 'name'))) {
+    const inp = h('input', { id: 'setup-' + st.key, placeholder: st.placeholder || '' }); inp.value = st.initial || '';
+    inputs[st.key] = inp;
+    body.append(h('div', { class: 'field' }, h('label', { for: 'setup-' + st.key }, st.label), inp));
+  }
+  const persona = h('textarea', { id: 'setup-persona', rows: 4 }); persona.value = script.persona || '';
+  body.append(h('div', { class: 'field' }, h('label', { for: 'setup-persona' }, '人设补充'), persona, h('div', { class: 'hint' }, '性格、经历、说话方式等。会在每回合提供给 AI，之后也能在状态面板里修改。')));
+  // 故事口味、文风、篇幅与节奏
+  body.append(h('div', { class: 'sec-h' }, '这一局想怎么玩'));
+  const profSel = selectEl('setup-profile', [...S.profiles.map(p => [p.id, p.name]), ['none', '不使用口味方案']], S.defaultProfile);
+  const profHint = h('div', { class: 'hint' });
+  const updProf = () => { const p = S.profiles.find(x => x.id === profSel.value); profHint.textContent = p ? profileSummary(p) : '只按剧本自身的设定走。'; };
+  profSel.onchange = updProf; updProf();
+  body.append(h('div', { class: 'field' }, h('label', { for: 'setup-profile' }, '故事口味'), profSel, profHint));
+  const styles = styleOptions(script);
+  const styleSel = selectEl('setup-style', styles.map(o => [o.id, o.name]), styles[0].id);
+  const styleHint = h('div', { class: 'hint' });
+  const updStyle = () => { const o = styles.find(x => x.id === styleSel.value); styleHint.textContent = o?.text ? o.text.slice(0, 80) + (o.text.length > 80 ? '…' : '') : ''; };
+  styleSel.onchange = updStyle; updStyle();
+  body.append(h('div', { class: 'field' }, h('label', { for: 'setup-style' }, '文风'), styleSel, styleHint));
+  const lenSel = selectEl('setup-length', [['short', '短（300～500 字）'], ['mid', '中（600～900 字）'], ['long', '长（1000～1500 字）']], S.length);
+  const paceSel = selectEl('setup-pace', [['slow', '慢（一回合一小步，细写当下）'], ['normal', '中（一回合一两步）'], ['fast', '快（一回合一整段，略写过渡）']], S.pace);
+  body.append(h('div', { class: 'row', style: 'align-items:flex-start' },
+    h('div', { class: 'field grow' }, h('label', { for: 'setup-length' }, '每回合篇幅'), lenSel),
+    h('div', { class: 'field grow' }, h('label', { for: 'setup-pace' }, '推进节奏'), paceSel)));
+  const useGP = h('input', { type: 'checkbox', id: 'setup-gp' }); useGP.checked = true;
+  body.append(h('label', { class: 'check', for: 'setup-gp' }, useGP, h('span', {}, '使用我的基础偏好', h('small', { class: 'muted', style: 'display:block' }, PREF_RULES.filter(r => S.prefs[r.key]).map(r => r.label).join('、') || '（设置里没有开启任何基础偏好）'))));
+  body.append(h('div', { class: 'sec-h' }, '存档'));
+  const saveName = h('input', { id: 'setup-savename', placeholder: '留空则自动命名' });
+  body.append(h('div', { class: 'field' }, h('label', { for: 'setup-savename' }, '存档名称'), saveName));
+  if (!script.opening) body.append(h('p', { class: 'small muted' }, '这个剧本没有预设开场白，开始后会由 AI 生成开场。'));
+  body.append(h('div', { class: 'row end', style: 'margin-top:8px' }, h('button', { class: 'btn primary', id: 'btn-start', onclick: async () => {
+    const vals = {}; for (const [k, i] of Object.entries(inputs)) vals[k] = str(i.value);
+    if (!vals.name) { toast('先给主角起个名字'); inputs.name?.focus(); return; }
+    if (!S.apiKey && !script.opening) { toast('这个剧本需要 AI 生成开场，请先在设置里填写密钥'); return; }
+    const so = styles.find(x => x.id === styleSel.value);
+    const save = newSave(script, vals, persona.value, str(saveName.value), {
+      length: lenSel.value, pace: paceSel.value, profileId: profSel.value, useGlobalPrefs: useGP.checked,
+      style: so && so.id !== 'none' ? { id: so.id, name: so.name, text: so.text } : null,
+    });
+    await persist(save);
+    viewStack.pop(); // 开局页不留在返回栈里
+    await enterGame(save);
+    await startOpening(save);
+  } }, '开始故事')));
+  showView('setup');
+}
+
+/* ---------------- 游戏界面 ---------------- */
+async function openSave(id) { const sv = await DB.get('saves', id); if (sv) enterGame(sv); }
+async function enterGame(save) {
+  G.save = migrateSave(save); G.error = null; G.stream = null;
+  showView('game');
+  renderGameHeader(); renderLog(); renderPaceBar(); setComposerBusy(G.busy);
+  requestAnimationFrame(() => scrollLogToEnd(true));
+}
+function renderPaceBar() {
+  const sv = G.save, bar = $('#pace-bar'); if (!sv) return;
+  const st = sv.state; bar.innerHTML = '';
+  const seg = (key, labels) => h('div', { class: 'seg', role: 'group' }, ...Object.entries(labels).map(([v, l]) => h('button', { 'aria-pressed': String(st[key] === v), title: key === 'pace' ? PACE_TEXT[v] : LENGTH_TEXT[v], onclick: async () => {
+    if (st[key] === v) return;
+    st[key] = v; await persist(sv); renderPaceBar();
+    toast(key === 'pace' ? PACE_TEXT[v].split('：')[0] + '，从下一回合开始生效' : `篇幅 ${LENGTH_TEXT[v]}，从下一回合开始生效`);
+  } }, l)));
+  const prof = resolveProfile(sv), sty = resolveStyle(sv);
+  bar.append(
+    h('span', { class: 'grp' }, '篇幅', seg('length', LENGTH_LABEL)),
+    h('span', { class: 'grp' }, '节奏', seg('pace', PACE_LABEL)),
+    h('span', { class: 'cur', onclick: () => openSheet('play'), title: '更换口味和文风' }, [prof?.name, sty?.name].filter(Boolean).join(' · ') || '口味 · 文风'));
+}
+function renderGameHeader() {
+  const sv = G.save; if (!sv) return;
+  $('#g-title').textContent = sv.script.title;
+  $('#g-sub').textContent = `${sv.state.stage || '—'} · 第 ${sv.state.turn} 回合${G.summarizing ? ' · 整理记忆中' : ''}`;
+}
+function narrHTML(text) {
+  return text.split(/\n+/).map(p => p.trim()).filter(Boolean).map(p => `<p>${esc(p).replace(/(“[^”]{1,400}”|「[^」]{1,400}」)/g, '<span class="dlg">$1</span>')}</p>`).join('');
+}
+const RENDER_WINDOW = 40;
+let renderFrom = null;
+function renderLog() {
+  const sv = G.save, log = $('#log'); if (!sv) return;
+  log.innerHTML = '';
+  const entries = sv.log;
+  const start = renderFrom === null ? Math.max(0, entries.length - RENDER_WINDOW) : renderFrom;
+  if (start > 0) log.append(h('div', { style: 'text-align:center;margin-bottom:16px' }, h('button', { class: 'btn sm', onclick: () => { renderFrom = Math.max(0, start - RENDER_WINDOW); renderLog(); } }, `显示更早的 ${start} 回合`)));
+  entries.slice(start).forEach((e, i) => {
+    const isLast = start + i === entries.length - 1;
+    const el = h('div', { class: 'entry', 'data-turn': e.turn });
+    el.append(h('div', { class: 'turn-mark' }, e.turn === 0 ? '开场' : `第 ${e.turn} 回合`));
+    if (e.action) el.append(h('div', { class: 'act' }, h('span', {}, e.action)));
+    el.append(h('div', { class: 'narr', html: narrHTML(e.narrative) }));
+    if (e.chips?.length) el.append(h('div', { class: 'chips' }, ...e.chips.map(c => h('span', { class: 'chip' + (c.c ? ' c-' + c.c : '') }, c.t))));
+    for (const w of e.warns || []) el.append(h('div', { class: 'warn-line' }, w));
+    if (isLast && !G.busy && !G.stream) {
+      if (e.choices?.length) {
+        el.append(h('div', { class: 'choices' }, ...e.choices.map(c => h('div', { class: 'choice' },
+          h('button', { onclick: () => playTurn(c) }, c),
+          h('button', { class: 'edit', 'aria-label': '修改后再发送', title: '修改后再发送', onclick: () => { const a = $('#action'); a.value = c; autoGrow(); a.focus(); } }, '✎')))));
+      }
+      if (e.turn > 0) el.append(h('div', { class: 'tools' },
+        h('button', { class: 'btn sm ghost', onclick: () => reroll() }, '重新生成'),
+        h('button', { class: 'btn sm ghost', onclick: async () => { if (await ask('回退一回合', '撤销这一回合，状态恢复到上一回合结束时，你的行动会放回输入框。', '回退')) { const last = await rollback(); if (last) { $('#action').value = last.action; autoGrow(); } } } }, '回退')));
+    }
+    log.append(el);
+  });
+  if (G.stream) {
+    const el = h('div', { class: 'entry', id: 'stream-entry' });
+    el.append(h('div', { class: 'turn-mark' }, G.stream.action ? `第 ${sv.state.turn + 1} 回合` : '开场'));
+    if (G.stream.action) el.append(h('div', { class: 'act' }, h('span', {}, G.stream.action)));
+    el.append(h('div', { class: 'narr', id: 'stream-narr' }));
+    el.append(h('div', { class: 'streaming-hint', id: 'stream-hint' }, h('span', { class: 'dots' }, h('i'), h('i'), h('i')), h('span', { id: 'stream-hint-text' }, '正在书写…')));
+    log.append(el);
+    updateStreamView();
+  }
+  if (G.error) {
+    const isOpening = G.error.action === '__opening__';
+    log.append(h('div', { class: 'error-box' }, G.error.message));
+    log.append(h('div', { class: 'tools' },
+      h('button', { class: 'btn sm', onclick: () => { const a = G.error.action; G.error = null; if (isOpening) startOpening(G.save); else playTurn(a); } }, '重试'),
+      isOpening ? null : h('button', { class: 'btn sm ghost', onclick: () => { $('#action').value = G.error.action; G.error = null; renderLog(); autoGrow(); } }, '放回输入框')));
+  }
+  if (!sv.log.length && !G.stream && !G.error && !G.busy) log.append(h('div', { class: 'stack', style: 'align-items:center;padding-top:30px' }, h('div', { class: 'empty' }, '故事还没有开始。'), h('button', { class: 'btn primary', onclick: () => startOpening(G.save) }, '生成开场')));
+}
+let streamRAF = 0;
+function updateStreamView() {
+  if (streamRAF) return;
+  streamRAF = requestAnimationFrame(() => {
+    streamRAF = 0;
+    const n = $('#stream-narr'); if (!n || !G.stream) return;
+    const nearBottom = isNearBottom();
+    const vis = visibleNarrative(G.stream.text);
+    n.innerHTML = narrHTML(vis);
+    const done = G.stream.text.includes(STATE_MARK);
+    const hint = $('#stream-hint-text');
+    if (hint) hint.textContent = G.stream.thinking && !vis ? '正在构思…' : done ? '正在整理人物与事件…' : vis ? '正在书写…' : '等待回应…';
+    if (nearBottom) scrollLogToEnd();
+  });
+}
+function isNearBottom() { const l = $('#log'); return l.scrollHeight - l.scrollTop - l.clientHeight < 140; }
+function scrollLogToEnd(force) { const l = $('#log'); if (force || isNearBottom()) l.scrollTop = l.scrollHeight; }
+function scrollToEntryStart() {
+  const l = $('#log'); const entries = l.querySelectorAll('.entry'); const last = entries[entries.length - 1];
+  if (last) l.scrollTop = Math.max(0, last.offsetTop - 12);
+}
+function setComposerBusy(b) {
+  const s = $('#send');
+  s.textContent = b ? '停止' : '发送';
+  s.classList.toggle('primary', !b);
+  $('#action').disabled = false;
+}
+function autoGrow() { const a = $('#action'); a.style.height = 'auto'; a.style.height = Math.min(130, a.scrollHeight) + 'px'; }
+$('#action').addEventListener('input', autoGrow);
+$('#action').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); $('#send').click(); } });
+$('#send').onclick = () => {
+  if (G.busy) { G.abort?.abort(); return; }
+  const a = $('#action'); const v = str(a.value); if (!v) { a.focus(); return; }
+  if (!G.save?.log.length) { toast('开场还没有生成'); return; }
+  a.value = ''; autoGrow(); playTurn(v);
+};
+$('#btn-leave').onclick = () => { if (G.busy) { toast('正在生成，先停止或等它写完'); return; } G.save = null; renderFrom = null; back(); };
+$('#btn-panel').onclick = () => openSheet();
+
+/* ---------------- 状态面板 ---------------- */
+const SHEET_TABS = [['status', '状态'], ['chars', '人物'], ['events', '事件'], ['goals', '目标'], ['play', '玩法'], ['memory', '记忆'], ['save', '存档']];
+let sheetTab = 'status';
+function openSheet(tab) { if (tab) sheetTab = tab; $('#scrim').hidden = false; $('#sheet').hidden = false; renderSheet(); }
+function closeSheet() { $('#scrim').hidden = true; $('#sheet').hidden = true; renderLog(); renderGameHeader(); renderPaceBar(); }
+$('#scrim').onclick = closeSheet; $('#sheet-close').onclick = closeSheet;
+function renderSheet() {
+  const tabs = $('#sheet-tabs'); tabs.innerHTML = '';
+  for (const [k, l] of SHEET_TABS) tabs.append(h('button', { class: 'tab', role: 'tab', 'aria-selected': String(k === sheetTab), onclick: () => { sheetTab = k; renderSheet(); } }, l));
+  const b = $('#sheet-body'); b.innerHTML = ''; b.scrollTop = 0;
+  ({ status: sheetStatus, chars: sheetChars, events: sheetEvents, goals: sheetGoals, play: sheetPlay, memory: sheetMemory, save: sheetSave })[sheetTab](b);
+}
+async function commit(msg) { await persist(G.save); renderSheet(); renderGameHeader(); if (msg) toast(msg); }
+function guardBusy() { if (G.busy) { toast('生成中，稍后再改'); return true; } return false; }
+
+function sheetStatus(b) {
+  const sv = G.save, sc = sv.script, st = sv.state;
+  b.append(h('div', { class: 'sec-h' }, '主角'));
+  const card = h('div', { class: 'card' });
+  for (const def of sc.stats) {
+    const v = st.stats[def.key];
+    const row = h('div', { class: 'stat-row', onclick: () => editStat(def) }, h('span', { class: 'lbl' }, def.label));
+    if (def.type === 'number') {
+      const hasBar = def.max !== undefined && def.display !== 'number';
+      row.append(hasBar ? h('div', { class: 'meter' }, h('i', { style: `width:${clamp((num(v) - (def.min || 0)) / (def.max - (def.min || 0)) * 100, 0, 100)}%` })) : h('span'),
+        h('span', { class: 'val' }, `${Math.round(num(v))}${def.max !== undefined ? ' / ' + def.max : ''}`));
+    } else row.append(h('span', { class: 'txt-val' }, str(v) || '—'));
+    card.append(row);
+  }
+  b.append(card);
+  b.append(h('div', { class: 'row', style: 'justify-content:space-between;margin-top:22px;margin-bottom:10px' }, h('span', { class: 'sec-h', style: 'margin:0' }, '物品'), h('button', { class: 'btn sm', onclick: () => editItem(null) }, '添加')));
+  if (!st.items.length) b.append(h('div', { class: 'empty' }, '身上空空如也。'));
+  else b.append(h('div', { class: 'card' }, ...st.items.map(it => h('div', { class: 'stat-row', onclick: () => editItem(it) }, h('span', { class: 'lbl' }, it.name), h('span', { class: 'small muted' }, it.desc || ''), h('span', { class: 'val' }, '×' + it.count)))));
+  b.append(h('div', { class: 'sec-h' }, '当前阶段'));
+  b.append(h('div', { class: 'card', style: 'cursor:pointer', onclick: async () => { if (guardBusy()) return; const r = await formModal('当前阶段', [{ key: 'stage', label: '时间 · 地点' }], { stage: st.stage }); if (r) { st.stage = str(r.stage); commit(); } } }, st.stage || '—'));
+}
+async function editStat(def) {
+  if (guardBusy()) return;
+  const st = G.save.state;
+  const r = await formModal(def.label, [{ key: 'v', label: def.type === 'number' ? `数值${def.max !== undefined ? `（${def.min ?? 0}～${def.max}）` : ''}` : '内容', type: def.type === 'number' ? 'number' : 'textarea', rows: 2 }], { v: st.stats[def.key] });
+  if (!r) return;
+  st.stats[def.key] = def.type === 'number' ? clamp(num(r.v), def.min, def.max) : str(r.v);
+  commit('已修改');
+}
+async function editItem(it) {
+  if (guardBusy()) return;
+  const st = G.save.state;
+  const r = await formModal(it ? '编辑物品' : '添加物品', [{ key: 'name', label: '名称' }, { key: 'desc', label: '说明', type: 'textarea', rows: 2 }, { key: 'count', label: '数量', type: 'number' }], it || { count: 1 },
+    { extra: it ? [{ label: '删除', danger: true, value: 'del' }] : [] });
+  if (r === 'del') { st.items.splice(st.items.indexOf(it), 1); return commit('已删除'); }
+  if (!r || !str(r.name)) return;
+  const o = { name: str(r.name), desc: str(r.desc), count: Math.max(1, Math.round(r.count || 1)) };
+  if (it) Object.assign(it, o); else st.items.push(o);
+  commit();
+}
+
+let showMinorChars = true;
+function sheetChars(b) {
+  const sv = G.save, st = sv.state, L = sv.script.relationLabels;
+  b.append(h('div', { class: 'row', style: 'justify-content:space-between;margin-bottom:12px' },
+    h('span', { class: 'small muted' }, `${st.characters.length} 位人物 · 点卡片可编辑`),
+    h('button', { class: 'btn sm', onclick: () => editChar(null) }, '添加人物')));
+  const list = [...st.characters].sort((a, c) => (IMPORTANCE_ORDER[a.importance] - IMPORTANCE_ORDER[c.importance]) || (c.lastTurn - a.lastTurn));
+  const wrap = h('div', { class: 'stack' });
+  for (const c of list) {
+    const gone = /死|离开|失踪/.test(c.status);
+    wrap.append(h('div', { class: 'card char' + (gone ? ' dim' : ''), onclick: () => editChar(c) },
+      avatarEl(c),
+      h('div', { class: 'body' },
+        h('div', { class: 'name' }, h('b', {}, c.name), h('small', {}, [c.relation, c.identity].filter(Boolean).join(' · ')), c.status && c.status !== '在世' ? h('span', { class: 'pill fail' }, c.status) : null, h('small', {}, IMPORTANCE_TEXT[c.importance])),
+        c.opinion ? h('div', { class: 'op' }, `“${c.opinion}”`) : h('div', { class: 'op' }, c.brief || ''),
+        traitTags(c),
+        h('div', { class: 'mini-meters' },
+          h('span', {}, L.friendliness), h('div', { class: 'meter' }, h('i', { style: `width:${c.friendliness}%` })), h('span', {}, Math.round(c.friendliness)),
+          h('span', {}, L.affection), h('div', { class: 'meter rose' }, h('i', { style: `width:${c.affection}%` })), h('span', {}, Math.round(c.affection))))));
+  }
+  b.append(wrap);
+}
+function hasHidden(c) { return !!(c.motive || c.backstory || c.secret); }
+function traitTags(c) {
+  const t = c.traits || [];
+  if (!t.length && !hasHidden(c)) return null;
+  return h('div', { class: 'traits' }, ...t.map(x => h('span', { class: 'trait', title: x.text }, x.title)), hasHidden(c) || !t.length ? h('span', { class: 'trait unk' }, '？？？') : null);
+}
+function traitPanel(c) {
+  const t = c.traits || [];
+  return h('div', {},
+    h('div', { class: 'sec-h', style: 'margin-top:0' }, '已揭示的词条'),
+    t.length ? h('ul', { class: 'trait-list' }, ...t.map(x => h('li', {}, h('b', {}, x.title), h('small', {}, `第${x.turn}回合`), h('div', {}, x.text)))) : h('p', { class: 'empty', style: 'margin:0 0 10px' }, '还没有发现此人的过往。和 Ta 深入交往，或许会知道更多。'),
+    h('p', { class: 'small muted', style: 'margin:0 0 14px' }, '词条由剧情揭示后自动写入，不能修改。'));
+}
+async function editChar(c) {
+  if (guardBusy()) return;
+  const st = G.save.state, L = G.save.script.relationLabels;
+  const base = c ? { ...c, aliases: (c.aliases || []).join('、'), notes: (c.notes || []).map(n => `${n.turn}|${n.text}`).join('\n') } : { friendliness: 50, affection: 0, importance: 'supporting', status: '在世' };
+  const r = await formModal(c ? c.name : '添加人物', [
+    { key: 'name', label: '名字' },
+    { key: 'aliases', label: '别名', hint: '用顿号分隔。AI 用别名称呼时也能对上这张卡。' },
+    { key: 'identity', label: '身份' },
+    { key: 'relation', label: '与主角的关系' },
+    { key: 'importance', label: '重要程度', type: 'select', options: [['major', '主要'], ['supporting', '次要'], ['minor', '路人']] },
+    { key: 'status', label: '状态', hint: '在世、离开、受伤、死亡等' },
+    { key: 'friendliness', label: `${L.friendliness}（0～100）`, type: 'number' },
+    { key: 'affection', label: `${L.affection}（0～100）`, type: 'number' },
+    { key: 'opinion', label: '对主角的看法', type: 'textarea', rows: 2 },
+    { key: 'personality', label: '性格', type: 'textarea', rows: 2 },
+    { key: 'appearance', label: '外貌', type: 'textarea', rows: 2 },
+    { key: 'brief', label: '简介', type: 'textarea', rows: 2 },
+    { key: 'notes', label: '与主角的往事', type: 'textarea', rows: 4, hint: '每行一条，格式“回合|内容”。每回合只把最近 8 条发给 AI。' },
+    { key: 'motive', label: '立场与动机', type: 'textarea', rows: 2, fold: '隐藏设定（剧透，只给 AI 看）' },
+    { key: 'backstory', label: '过往经历', type: 'textarea', rows: 3, fold: '隐藏设定（剧透，只给 AI 看）' },
+    { key: 'secret', label: '秘密', type: 'textarea', rows: 2, fold: '隐藏设定（剧透，只给 AI 看）', hint: 'AI 会依据这些设定来演绎人物，并在剧情里慢慢揭示。留空时 AI 会在人物有重要戏份时自己补全。' },
+  ], base, { extra: c ? [{ label: '删除', danger: true, value: 'del' }] : [], prefix: c ? traitPanel(c) : null });
+  if (r === 'del') { if (await ask('删除人物', `删除「${c.name}」的人物卡？AI 之后将不再记得此人的设定。`, '删除', true)) { st.characters.splice(st.characters.indexOf(c), 1); commit('已删除'); } return; }
+  if (!r || !str(r.name)) return;
+  const upd = {
+    name: str(r.name), aliases: str(r.aliases).split(/[、,，]/).map(str).filter(Boolean), identity: str(r.identity), relation: str(r.relation), importance: r.importance,
+    status: str(r.status) || '在世', friendliness: clamp(num(r.friendliness), 0, 100), affection: clamp(num(r.affection), 0, 100), opinion: str(r.opinion), personality: str(r.personality),
+    appearance: str(r.appearance), brief: str(r.brief), motive: str(r.motive), backstory: str(r.backstory), secret: str(r.secret),
+    notes: str(r.notes).split('\n').map(str).filter(Boolean).map(line => { const m = line.match(/^(\d+)\s*[|｜]\s*(.+)$/); return m ? { turn: +m[1], text: m[2] } : { turn: st.turn, text: line }; }),
+  };
+  if (c) Object.assign(c, upd); else st.characters.push(makeCharacter(upd, st.turn));
+  commit('已保存');
+}
+
+function sheetEvents(b) {
+  const st = G.save.state;
+  b.append(h('div', { class: 'row', style: 'justify-content:space-between;margin-bottom:8px' },
+    h('span', { class: 'small muted' }, `未了结 ${st.events.filter(e => !e.resolved).length} · 已了结 ${st.events.filter(e => e.resolved).length}`),
+    h('button', { class: 'btn sm', onclick: () => editEvent(null) }, '添加事件')));
+  if (!st.events.length) { b.append(h('div', { class: 'empty' }, '还没有记录关键事件。剧情出现转折时，AI 会自动记下来。')); return; }
+  const card = h('div', { class: 'card', style: 'padding:4px 14px' });
+  for (const e of [...st.events].reverse()) {
+    card.append(h('div', { class: 'ev' + (e.resolved ? ' done' : ''), onclick: () => editEvent(e) },
+      h('span', { class: 't' }, `第${e.turn}回`),
+      h('div', {}, h('b', {}, e.title), e.weight === 'major' ? h('span', { class: 'pill major' }, '重大') : null, e.resolved ? h('span', { class: 'pill ok' }, '已了结') : null,
+        e.description ? h('p', {}, e.description) : null,
+        e.characters?.length ? h('p', {}, '涉及：' + e.characters.join('、')) : null,
+        e.consequence ? h('p', {}, '后续：' + e.consequence) : null)));
+  }
+  b.append(card);
+}
+async function editEvent(e) {
+  if (guardBusy()) return;
+  const st = G.save.state;
+  const r = await formModal(e ? '编辑事件' : '添加事件', [
+    { key: 'title', label: '标题' }, { key: 'description', label: '经过', type: 'textarea', rows: 3 },
+    { key: 'characters', label: '涉及人物', hint: '用顿号分隔' }, { key: 'consequence', label: '可能的后续', type: 'textarea', rows: 2 },
+    { key: 'weight', label: '分量', type: 'select', options: [['minor', '一般'], ['major', '重大']] },
+    { key: 'turn', label: '发生在第几回合', type: 'number' }, { key: 'resolved', label: '已了结', type: 'checkbox' },
+  ], e ? { ...e, characters: (e.characters || []).join('、') } : { weight: 'minor', turn: st.turn, resolved: false }, { extra: e ? [{ label: '删除', danger: true, value: 'del' }] : [] });
+  if (r === 'del') { st.events.splice(st.events.indexOf(e), 1); return commit('已删除'); }
+  if (!r || !str(r.title)) return;
+  const o = { title: str(r.title), description: str(r.description), characters: str(r.characters).split(/[、,，]/).map(str).filter(Boolean), consequence: str(r.consequence), weight: r.weight, turn: Math.max(0, Math.round(r.turn)), resolved: !!r.resolved };
+  if (e) Object.assign(e, o); else st.events.push({ id: uid(), ...o });
+  st.events.sort((a, c) => a.turn - c.turn);
+  commit('已保存');
+}
+
+function sheetGoals(b) {
+  const st = G.save.state;
+  b.append(h('div', { class: 'row', style: 'justify-content:space-between;margin-bottom:12px' }, h('span', { class: 'small muted' }, '点目标可修改'), h('button', { class: 'btn sm', onclick: () => editGoal(null) }, '添加目标')));
+  if (!st.objectives.length) { b.append(h('div', { class: 'empty' }, '没有目标。')); return; }
+  const order = { active: 0, completed: 1, failed: 2 };
+  const wrap = h('div', { class: 'stack' });
+  for (const o of [...st.objectives].sort((a, c) => order[a.status] - order[c.status])) {
+    wrap.append(h('div', { class: 'card' + (o.status !== 'active' ? ' dim' : ''), style: 'cursor:pointer', onclick: () => editGoal(o) },
+      h('div', { class: 'row' }, h('b', { class: 'grow', style: 'font-family:var(--serif)' }, o.title), h('span', { class: 'pill ' + (o.status === 'completed' ? 'ok' : o.status === 'failed' ? 'fail' : 'major') }, { active: '进行中', completed: '完成', failed: '失败' }[o.status])),
+      o.description ? h('p', { class: 'small muted', style: 'margin:6px 0' }, o.description) : null,
+      h('div', { class: 'mini-meters', style: 'margin-top:6px' }, h('span', {}, '进度'), h('div', { class: 'meter' }, h('i', { style: `width:${o.progress}%` })), h('span', {}, o.progress + '%'))));
+  }
+  b.append(wrap);
+}
+async function editGoal(o) {
+  if (guardBusy()) return;
+  const st = G.save.state;
+  const r = await formModal(o ? '编辑目标' : '添加目标', [{ key: 'title', label: '标题' }, { key: 'description', label: '说明', type: 'textarea', rows: 2 },
+    { key: 'status', label: '状态', type: 'select', options: [['active', '进行中'], ['completed', '完成'], ['failed', '失败']] }, { key: 'progress', label: '进度（0～100）', type: 'number' }],
+    o || { status: 'active', progress: 0 }, { extra: o ? [{ label: '删除', danger: true, value: 'del' }] : [] });
+  if (r === 'del') { st.objectives.splice(st.objectives.indexOf(o), 1); return commit('已删除'); }
+  if (!r || !str(r.title)) return;
+  const v = { title: str(r.title), description: str(r.description), status: r.status, progress: clamp(Math.round(r.progress), 0, 100) };
+  if (o) Object.assign(o, v); else st.objectives.push({ id: uid(), turn: st.turn, ...v });
+  commit('已保存');
+}
+
+function sheetMemory(b) {
+  const sv = G.save, st = sv.state;
+  const pending = sv.log.filter(e => e.turn > st.summarizedUpTo && e.turn <= st.turn).length;
+  b.append(h('p', { class: 'small muted', style: 'margin-top:0;line-height:1.7' },
+    `AI 每回合能看到：人物卡、关键事件、目标、物品、这份剧情摘要，以及最近几回合的原文。${st.summarizedUpTo < 0 ? '摘要还没有生成' : `摘要目前覆盖到第 ${st.summarizedUpTo} 回合`}，有 ${pending} 回合以原文形式保留，累积到 ${S.recentTurns + S.summaryInterval} 回合时会自动把较早的部分并进摘要。${G.summarizing ? '（正在整理…）' : ''}`));
+  const mem = h('textarea', { id: 'mem-text', rows: 12 }); mem.value = st.memory || '';
+  b.append(h('div', { class: 'field' }, h('label', { for: 'mem-text' }, `剧情摘要（${(st.memory || '').length} 字，上限约 ${S.memoryMaxChars} 字）`), mem));
+  b.append(h('div', { class: 'row end' },
+    h('button', { class: 'btn sm', disabled: G.summarizing || G.busy || !pending, onclick: () => { maybeSummarize(true); toast('开始整理，完成后会自动更新'); } }, '立即总结全部'),
+    h('button', { class: 'btn sm primary', onclick: async () => { if (guardBusy()) return; st.memory = mem.value.trim(); await commit('摘要已保存'); } }, '保存摘要')));
+  b.append(h('details', { class: 'fold', style: 'margin-top:18px' }, h('summary', {}, '查看下一回合会发给 AI 的完整内容'),
+    h('pre', { style: 'white-space:pre-wrap;font-size:12px;line-height:1.55;margin:10px 0 0;max-height:50vh;overflow:auto' }, buildSystemPrompt(sv) + '\n\n——————\n\n' + buildUserPrompt(sv, '（下一回合的行动）'))));
+}
+
+function sheetPlay(b) {
+  const sv = G.save, st = sv.state;
+  const sec = t => b.append(h('div', { class: 'sec-h' }, t));
+  // 口味
+  sec('故事口味');
+  const prof = resolveProfile(sv);
+  const profSel = selectEl('play-profile', [...S.profiles.map(p => [p.id, p.name]), ...(prof && !S.profiles.find(p => p.id === prof.id) ? [[prof.id, prof.name + '（已删除的方案副本）']] : []), ['none', '不使用口味方案']], st.profileId || 'none');
+  profSel.onchange = async () => { if (guardBusy()) return; st.profileId = profSel.value; const p = S.profiles.find(x => x.id === profSel.value); if (p) st.profileSnapshot = clone(p); await commit('口味已切换，从下一回合开始生效'); };
+  b.append(h('div', { class: 'field' }, profSel, h('div', { class: 'hint' }, prof ? profileSummary(prof) : '只按剧本自身的设定走。')));
+  b.append(h('div', { class: 'row', style: 'margin:-4px 0 6px' },
+    prof && S.profiles.includes(prof) ? h('button', { class: 'btn sm', onclick: async () => { const r = await profileEditor(prof); if (r && r !== 'deleted') st.profileSnapshot = clone(r); await commit(r ? '方案已更新' : ''); } }, '编辑这套方案') : null,
+    h('button', { class: 'btn sm', onclick: async () => { const r = await profileEditor(null); if (r && r !== 'deleted') { st.profileId = r.id; st.profileSnapshot = clone(r); await commit('已新建并切换'); } } }, '新建方案')));
+  // 文风
+  sec('文风');
+  const styles = styleOptions(sv.script);
+  const cur = st.style?.id || 'none';
+  const opts = styles.map(o => [o.id, o.name]);
+  if (st.style && !styles.find(o => o.id === st.style.id)) opts.unshift([st.style.id, st.style.name + '（原文风副本）']);
+  const stySel = selectEl('play-style', opts, cur);
+  stySel.onchange = async () => { if (guardBusy()) return; const o = styles.find(x => x.id === stySel.value); st.style = o && o.id !== 'none' ? { id: o.id, name: o.name, text: o.text } : (stySel.value === st.style?.id ? st.style : null); await commit('文风已切换，从下一回合开始生效'); };
+  const sty = resolveStyle(sv);
+  b.append(h('div', { class: 'field' }, stySel, sty ? h('div', { class: 'hint' }, sty.text) : null));
+  b.append(h('div', { class: 'row', style: 'margin:-4px 0 6px' }, h('button', { class: 'btn sm', onclick: async () => { const r = await styleEditor(null); if (r) { st.style = { id: 'custom:' + r.id, name: r.name, text: r.text }; await commit('已新建并切换文风'); } } }, '新建自定义文风')));
+  // 篇幅节奏
+  sec('篇幅与节奏');
+  b.append(h('p', { class: 'small muted', style: 'margin:0 0 8px;line-height:1.7' }, '篇幅决定每回合写多细，节奏决定每回合推进多远，两者可以自由组合。游戏页输入框上方也可以随时切换。'));
+  const lenSel = selectEl('play-length', [['short', '短（300～500 字）'], ['mid', '中（600～900 字）'], ['long', '长（1000～1500 字）']], st.length);
+  const paceSel = selectEl('play-pace', [['slow', '慢：一回合一小步'], ['normal', '中：一回合一两步'], ['fast', '快：一回合一整段']], st.pace);
+  lenSel.onchange = async () => { st.length = lenSel.value; await commit(); };
+  paceSel.onchange = async () => { st.pace = paceSel.value; await commit(); };
+  b.append(h('div', { class: 'row', style: 'align-items:flex-start' }, h('div', { class: 'field grow' }, lenSel), h('div', { class: 'field grow' }, paceSel)));
+  // 基础偏好
+  sec('基础偏好');
+  const gp = h('input', { type: 'checkbox', id: 'play-gp' }); gp.checked = st.useGlobalPrefs !== false;
+  gp.onchange = async () => { st.useGlobalPrefs = gp.checked; await commit(gp.checked ? '本局使用基础偏好' : '本局不使用基础偏好'); };
+  b.append(h('label', { class: 'check', for: 'play-gp' }, gp, h('span', {}, '本局使用我的基础偏好', h('small', { class: 'muted', style: 'display:block' }, PREF_RULES.filter(r => S.prefs[r.key]).map(r => r.label).join('、') + (str(S.prefs.extra) ? '，以及自定义偏好' : '') + '。在设置里修改。'))));
+  // 人设与要求
+  sec('本局设定');
+  const persona = h('textarea', { id: 'persona-text', rows: 4 }); persona.value = st.persona || '';
+  const inst = h('textarea', { id: 'inst-text', rows: 3, placeholder: '例如：接下来多写一些阿莺的戏份。' }); inst.value = st.playInstruction || '';
+  b.append(h('div', { class: 'field' }, h('label', { for: 'persona-text' }, '主角人设'), persona));
+  b.append(h('div', { class: 'field' }, h('label', { for: 'inst-text' }, '对接下来剧情的要求'), inst, h('div', { class: 'hint' }, '每回合都会发给 AI，直到你清空它。')));
+  b.append(h('div', { class: 'row end' }, h('button', { class: 'btn sm primary', onclick: async () => { if (guardBusy()) return; st.persona = persona.value.trim(); st.playInstruction = inst.value.trim(); await commit('已保存'); } }, '保存本局设定')));
+}
+
+function sheetSave(b) {
+  const sv = G.save, u = sv.usage;
+  b.append(h('div', { class: 'card' }, h('dl', { class: 'kv' },
+    h('dt', {}, '存档'), h('dd', {}, sv.name), h('dt', {}, '剧本'), h('dd', {}, sv.script.title),
+    h('dt', {}, '回合'), h('dd', {}, String(sv.state.turn)), h('dt', {}, '可回退'), h('dd', {}, `${(sv.snapshots || []).length} 回合`),
+    h('dt', {}, 'AI 调用'), h('dd', {}, `${u.calls} 次`), h('dt', {}, '输入'), h('dd', {}, `${(u.prompt / 1000).toFixed(1)}k tokens（缓存命中 ${(u.cached / 1000).toFixed(1)}k）`), h('dt', {}, '输出'), h('dd', {}, `${(u.completion / 1000).toFixed(1)}k tokens`))));
+  b.append(h('div', { class: 'row', style: 'margin-top:14px' },
+    h('button', { class: 'btn', onclick: async () => { const r = await formModal('存档改名', [{ key: 'name', label: '名称' }], { name: sv.name }); if (r && str(r.name)) { sv.name = str(r.name); commit(); } } }, '改名'),
+    h('button', { class: 'btn', onclick: async () => { if (guardBusy()) return; const c = clone(sv); c.id = 'save-' + uid(); c.name = sv.name + ' · 分支'; await persist(c); toast('已另存为新存档，可在书架里找到'); } }, '另存一份（开分支）'),
+    h('button', { class: 'btn', onclick: () => download(`存档-${sv.name}.json`, JSON.stringify(sv)) }, '导出存档文件'),
+    h('button', { class: 'btn', onclick: () => download(`剧情-${sv.name}.txt`, sv.log.map(e => `${e.turn === 0 ? '【开场】' : `【第${e.turn}回合】`}\n${e.action ? '> ' + e.action + '\n\n' : ''}${e.narrative}`).join('\n\n')) }, '导出全文 txt')));
+  b.append(h('p', { class: 'small muted', style: 'margin-top:16px;line-height:1.7' }, '存档只保存在这个浏览器里。清理浏览器数据或换手机前，记得先导出存档文件。'));
+}
+
+/* ---------------- 设置页 ---------------- */
+function renderSettings() {
+  const b = $('#settings-body'); b.innerHTML = '';
+  const fields = {};
+  const field = (key, label, el, hint) => { el.id = 'set-' + key; fields[key] = el; b.append(h('div', { class: 'field' }, h('label', { for: el.id }, label), el, hint ? h('div', { class: 'hint' }, hint) : null)); };
+  const input = (v, attrs = {}) => { const i = h('input', attrs); i.value = v ?? ''; return i; };
+  b.append(h('div', { class: 'sec-h' }, '模型接口'));
+  field('baseUrl', '接口地址', input(S.baseUrl, { placeholder: 'https://api.deepseek.com' }), '默认是 DeepSeek 官方。其他兼容 OpenAI 格式的服务也可以填，比如硅基流动。');
+  const key = input(S.apiKey, { type: 'password', autocomplete: 'off', placeholder: 'sk-…' });
+  field('apiKey', 'API 密钥', key, '只保存在这台设备的浏览器里，随请求直接发给上面的接口地址，不经过其他服务器。');
+  b.append(h('div', { class: 'row', style: 'margin:-4px 0 12px' }, h('button', { class: 'btn sm ghost', onclick: () => { key.type = key.type === 'password' ? 'text' : 'password'; } }, '显示 / 隐藏密钥')));
+  const model = input(S.model, { list: 'model-list' });
+  b.append(h('datalist', { id: 'model-list' }, h('option', { value: 'deepseek-flash' }), h('option', { value: 'deepseek-v4-pro' })));
+  field('model', '模型', model, 'deepseek-flash 便宜快速，适合日常玩；deepseek-v4-pro 文笔和逻辑更好，价格约贵 4 倍。');
+  const think = h('input', { type: 'checkbox', id: 'set-think' }); think.checked = S.disableThinking;
+  b.append(h('label', { class: 'check', for: 'set-think' }, think, h('span', {}, '关闭思考模式', h('br'), h('span', { class: 'small muted' }, '推荐开着这个选项：回复更快、更省钱。用其他厂商的接口时如果报错，就取消勾选。'))));
+  field('temperature', '温度（创造性）', input(S.temperature, { type: 'number', step: '0.1', min: '0', max: '2', inputmode: 'decimal' }), '越高越天马行空，越低越稳定。叙事推荐 1.0～1.5。');
+  field('maxTokens', '单次最多输出 tokens', input(S.maxTokens, { type: 'number', inputmode: 'numeric' }), '剧情加状态更新一般用 1500～2500。');
+  b.append(h('div', { class: 'row', style: 'margin-bottom:8px' }, h('button', { class: 'btn', id: 'btn-test', onclick: async () => {
+    const btn = $('#btn-test'); readForm(); btn.disabled = true; btn.textContent = '测试中…';
+    try { const r = await chatOnce([{ role: 'user', content: '只回复两个字：你好' }], { maxTokens: 20, temperature: 0 }); addUsage(null, r.usage); toast('连接成功：' + str(r.text).slice(0, 20)); await saveSettings(); }
+    catch (e) { openModal({ title: '连接失败', body: h('p', { style: 'white-space:pre-wrap' }, e.message || String(e)) }); }
+    btn.disabled = false; btn.textContent = '测试连接';
+  } }, '测试连接')));
+
+  // 基础偏好
+  b.append(h('div', { class: 'sec-h' }, '基础偏好（所有剧本生效）'));
+  b.append(h('p', { class: 'small muted', style: 'margin:0 0 10px;line-height:1.7' }, '不管玩什么剧本都会告诉 AI 的偏好。与剧本里明确写死的设定冲突时，以剧本为准。每一局也可以单独关掉。'));
+  const prefBoxes = {};
+  for (const r of PREF_RULES) {
+    const i = h('input', { type: 'checkbox', id: 'pref-' + r.key }); i.checked = !!S.prefs[r.key]; prefBoxes[r.key] = i;
+    b.append(h('label', { class: 'check', for: 'pref-' + r.key }, i, h('span', {}, r.label, h('small', { class: 'muted', style: 'display:block;line-height:1.6' }, r.text.replace(/^[^：]+：/, '')))));
+  }
+  const prefExtra = h('textarea', { rows: 3, placeholder: '其他任何你希望一直生效的偏好。' }); prefExtra.value = S.prefs.extra || '';
+  field('prefExtra', '自定义偏好', prefExtra);
+
+  // 口味方案
+  b.append(h('div', { class: 'sec-h' }, '故事口味方案'));
+  b.append(h('p', { class: 'small muted', style: 'margin:0 0 10px;line-height:1.7' }, '按心情准备几套方案，开局时选一套，游戏中途也能换。标“默认”的那套会在开新游戏时预先选中。'));
+  const plist = h('div', { class: 'stack', style: 'margin-bottom:10px' });
+  for (const p of S.profiles) {
+    plist.append(h('div', { class: 'card opt-card' },
+      h('div', { class: 'body' }, h('b', {}, p.name), h('p', {}, profileSummary(p)), p.extra ? h('p', {}, p.extra) : null),
+      h('div', { class: 'stack', style: 'gap:6px;align-items:flex-end' },
+        p.id === S.defaultProfile ? h('span', { class: 'badge' }, '默认') : h('button', { class: 'btn sm ghost', onclick: async () => { readForm(); S.defaultProfile = p.id; await saveSettings(); renderSettings(); } }, '设为默认'),
+        h('button', { class: 'btn sm', onclick: async () => { readForm(); await profileEditor(p); renderSettings(); } }, '编辑'))));
+  }
+  b.append(plist, h('div', { class: 'row', style: 'margin-bottom:6px' }, h('button', { class: 'btn sm', onclick: async () => { readForm(); await profileEditor(null); renderSettings(); } }, '新建方案')));
+
+  // 文风库
+  b.append(h('div', { class: 'sec-h' }, '我的文风'));
+  const slist = h('div', { class: 'stack', style: 'margin-bottom:10px' });
+  if (!S.customStyles.length) slist.append(h('div', { class: 'empty' }, '还没有自定义文风。粘贴一段你喜欢的文字，让 AI 帮你整理成文风说明。'));
+  for (const st of S.customStyles) slist.append(h('div', { class: 'card opt-card', style: 'cursor:pointer', onclick: async () => { readForm(); await styleEditor(st); renderSettings(); } }, h('div', { class: 'body' }, h('b', {}, st.name), h('p', {}, st.text.slice(0, 90) + (st.text.length > 90 ? '…' : '')))));
+  b.append(slist, h('div', { class: 'row', style: 'margin-bottom:6px' }, h('button', { class: 'btn sm', onclick: async () => { readForm(); await styleEditor(null); renderSettings(); } }, '新建文风')));
+  b.append(h('details', { class: 'fold' }, h('summary', {}, `查看 ${STYLE_PRESETS.length} 种预设文风`), ...STYLE_PRESETS.map(x => h('div', { style: 'margin-top:10px' }, h('b', { style: 'font-family:var(--serif)' }, x.name), h('p', { class: 'small muted', style: 'margin:3px 0 0;line-height:1.65' }, x.text)))));
+  const style = h('textarea', { rows: 3, placeholder: '例如：少用成语；不要替我说话。' }); style.value = S.globalStyle;
+  field('globalStyle', '写作习惯（叠加在任何文风之上）', style, '对所有剧本生效，适合写一些你讨厌的写法。');
+
+  // 默认篇幅节奏
+  b.append(h('div', { class: 'sec-h' }, '新游戏的默认篇幅与节奏'));
+  field('length', '篇幅（写多细）', selectEl('x', [['short', '短：300～500 字'], ['mid', '中：600～900 字'], ['long', '长：1000～1500 字']], S.length));
+  field('pace', '节奏（推多远）', selectEl('x', [['slow', '慢：一回合一小步，故事内时间只过几分钟'], ['normal', '中：一回合一两步'], ['fast', '快：一回合一整段，可以跳过过渡和时间']], S.pace));
+
+  b.append(h('div', { class: 'sec-h' }, '记忆'));
+  field('recentTurns', '保留原文的回合数', input(S.recentTurns, { type: 'number', min: '1', max: '10', inputmode: 'numeric' }), '最近几回合的剧情原文直接发给 AI。越多越连贯，也越费 tokens。推荐 3～5。');
+  field('summaryInterval', '摘要间隔（回合）', input(S.summaryInterval, { type: 'number', min: '1', max: '10', inputmode: 'numeric' }), '原文每超出这么多回合，就把较早的部分并进剧情摘要（额外调用一次 AI）。');
+  field('memoryMaxChars', '剧情摘要上限（字）', input(S.memoryMaxChars, { type: 'number', inputmode: 'numeric' }), '长篇可以调到 2500～3000。');
+  field('snapshotLimit', '可回退的回合数', input(S.snapshotLimit, { type: 'number', inputmode: 'numeric' }));
+
+  b.append(h('div', { class: 'sec-h' }, '显示'));
+  const theme = h('select'); for (const [v, l] of [['auto', '跟随系统'], ['light', '浅色'], ['dark', '深色']]) theme.append(h('option', { value: v }, l)); theme.value = S.theme;
+  field('theme', '主题', theme);
+  field('readSize', '正文字号', input(S.readSize, { type: 'number', min: '14', max: '24', inputmode: 'numeric' }));
+
+  b.append(h('div', { class: 'row end', style: 'margin:6px 0 4px' }, h('button', { class: 'btn primary', onclick: async () => { readForm(); await saveSettings(); toast('设置已保存'); } }, '保存设置')));
+
+  const u = S.usage;
+  b.append(h('div', { class: 'sec-h' }, '用量统计（所有存档）'));
+  b.append(h('div', { class: 'card' }, h('dl', { class: 'kv' }, h('dt', {}, '调用次数'), h('dd', {}, String(u.calls)), h('dt', {}, '输入'), h('dd', {}, `${(u.prompt / 1000).toFixed(1)}k tokens（缓存命中 ${(u.cached / 1000).toFixed(1)}k）`), h('dt', {}, '输出'), h('dd', {}, `${(u.completion / 1000).toFixed(1)}k tokens`)),
+    h('div', { class: 'row end', style: 'margin-top:8px' }, h('button', { class: 'btn sm ghost', onclick: async () => { S.usage = clone(DEFAULT_SETTINGS.usage); await saveSettings(); renderSettings(); } }, '清零'))));
+
+  b.append(h('div', { class: 'sec-h' }, '数据'));
+  b.append(h('div', { class: 'row' },
+    h('button', { class: 'btn', onclick: async () => { const all = { app: 'changye-wenyou', v: APP_VERSION, exportedAt: Date.now(), scripts: await DB.all('scripts'), saves: await DB.all('saves'), prefs: { prefs: S.prefs, profiles: S.profiles, defaultProfile: S.defaultProfile, customStyles: S.customStyles, globalStyle: S.globalStyle, length: S.length, pace: S.pace } }; download(`长夜书局-全部备份-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(all)); } }, '备份全部剧本和存档'),
+    h('button', { class: 'btn', onclick: async () => {
+      const text = await pickFile(); if (!text) return;
+      let all; try { all = JSON.parse(text); } catch { toast('文件不是有效的 JSON'); return; }
+      if (all?.app !== 'changye-wenyou') { toast('这不是长夜书局的备份文件'); return; }
+      for (const s of all.scripts || []) await DB.put('scripts', s);
+      for (const s of all.saves || []) await DB.put('saves', s);
+      if (all.prefs) { Object.assign(S, all.prefs); await saveSettings(); await loadSettings(); renderSettings(); }
+      toast(`已恢复 ${(all.scripts || []).length} 个剧本、${(all.saves || []).length} 个存档`);
+    } }, '从备份恢复')));
+  b.append(h('p', { class: 'small muted', style: 'margin:16px 0 30px' }, '备份包含剧本、存档、偏好、口味方案和文风库，不包含 API 密钥。'));
+
+  function readForm() {
+    S.baseUrl = str(fields.baseUrl.value) || DEFAULT_SETTINGS.baseUrl;
+    S.apiKey = str(fields.apiKey.value);
+    S.model = str(fields.model.value) || DEFAULT_SETTINGS.model;
+    S.disableThinking = think.checked;
+    S.temperature = clamp(num(fields.temperature.value, 1.3), 0, 2);
+    S.maxTokens = clamp(Math.round(num(fields.maxTokens.value, 3000)), 500, 16000);
+    S.length = fields.length.value;
+    S.pace = fields.pace.value;
+    S.globalStyle = fields.globalStyle.value.trim();
+    for (const r of PREF_RULES) S.prefs[r.key] = prefBoxes[r.key].checked;
+    S.prefs.extra = fields.prefExtra.value.trim();
+    S.recentTurns = clamp(Math.round(num(fields.recentTurns.value, 3)), 1, 10);
+    S.summaryInterval = clamp(Math.round(num(fields.summaryInterval.value, 3)), 1, 10);
+    S.memoryMaxChars = clamp(Math.round(num(fields.memoryMaxChars.value, 1500)), 300, 6000);
+    S.snapshotLimit = clamp(Math.round(num(fields.snapshotLimit.value, 30)), 1, 200);
+    S.theme = fields.theme.value;
+    S.readSize = clamp(Math.round(num(fields.readSize.value, 17)), 14, 24);
+  }
+}
+$('#btn-open-settings').onclick = () => { renderSettings(); showView('settings'); };
+
+/* ---------------- 启动 ---------------- */
+(async function boot() {
+  await DB.open();
+  await loadSettings();
+  if (DB.fallback) toast('浏览器不支持 IndexedDB，改用简易存储，容量较小');
+  renderShelf();
+  window.addEventListener('beforeunload', e => { if (G.busy) { e.preventDefault(); e.returnValue = ''; } });
+})();
+
+// 供测试使用
+window.__wenyou = { G, S: () => S, buildSystemPrompt, buildUserPrompt, splitOutput, applyDelta, parseLooseJSON, normalizeScript };
+</script>
+</body>
+</html>

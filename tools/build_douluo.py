@@ -38,6 +38,7 @@ STYLE = "东方玄幻群像文风。战斗描写清晰：魂环颜色、魂技�
 # ---------------- 属性 ----------------
 STATS = [
     {"key": "name", "label": "姓名", "type": "text", "ask": True, "initial": "", "placeholder": "你的名字"},
+    {"key": "gender", "label": "性别", "type": "text", "ask": True, "initial": "女", "fixed": True},
     {"key": "age", "label": "年龄", "type": "text", "initial": "十八岁"},
     {"key": "origin", "label": "出身", "type": "text", "initial": ""},
     {"key": "identity", "label": "身份", "type": "text", "initial": "武魂殿魂师"},

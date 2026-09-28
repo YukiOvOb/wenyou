@@ -28,6 +28,14 @@
    "placeholder": "你的名字"
   },
   {
+   "key": "gender",
+   "label": "性别",
+   "type": "text",
+   "ask": true,
+   "initial": "女",
+   "fixed": true
+  },
+  {
    "key": "age",
    "label": "年龄",
    "type": "text",

@@ -102,6 +102,12 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .choice button{border:0;background:transparent;text-align:left;padding:11px 14px;flex:1;font-size:15px;line-height:1.5}
 .choice button.edit{flex:0 0 44px;border-left:1px solid var(--line);color:var(--muted);text-align:center;padding:0}
 .choice button:active{background:var(--surface-2)}
+.choices-head{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted);margin-top:4px}
+.link-btn{border:0;background:transparent;color:var(--accent);font-size:13px;padding:4px 2px}
+.choice.editing{flex-direction:column;border-color:var(--accent)}
+.choice-edit{border:0;background:transparent;padding:11px 14px 6px;font:inherit;font-size:15px;line-height:1.5;resize:none;width:100%}
+.choice-edit:focus{outline:none}
+.choice-custom{border:1px dashed var(--line);background:transparent;border-radius:12px;padding:10px 14px;text-align:left;color:var(--muted);font-size:14.5px}
 .tools{display:flex;gap:4px;justify-content:center;margin-top:12px}
 .streaming-hint{color:var(--muted);font-size:13px;display:flex;align-items:center;gap:8px;margin:6px 0}
 .dots{display:inline-flex;gap:3px}
@@ -678,6 +684,14 @@ const BUILTIN_SCRIPTS = [
    "ask": true,
    "initial": "",
    "placeholder": "你的名字"
+  },
+  {
+   "key": "gender",
+   "label": "性别",
+   "type": "text",
+   "ask": true,
+   "initial": "女",
+   "fixed": true
   },
   {
    "key": "age",
@@ -1846,6 +1860,7 @@ function normalizeScript(raw) {
   s.relationLabels = Object.assign({ friendliness: '好感', affection: '心动' }, s.relationLabels || {});
   s.stats = Array.isArray(s.stats) ? s.stats.filter(x => x && x.key).map(x => ({ ...x, key: str(x.key), label: str(x.label) || str(x.key), type: x.type === 'text' ? 'text' : 'number' })) : [];
   if (!s.stats.find(x => x.key === 'name')) s.stats.unshift({ key: 'name', label: '姓名', type: 'text', ask: true, initial: '' });
+  ensureGenderStat(s);
   const keys = new Set(); for (const x of s.stats) { if (keys.has(x.key)) errors.push('属性 key 重复：' + x.key); keys.add(x.key); }
   s.characters = Array.isArray(s.characters) ? s.characters.filter(c => c && str(c.name)) : [];
   s.objectives = Array.isArray(s.objectives) ? s.objectives.filter(o => o && str(o.title)) : [];
@@ -1937,10 +1952,27 @@ function migrateSave(save) {
   }
   for (const c of st.characters) { c.traits = c.traits || []; c.motive = c.motive || ''; c.backstory = c.backstory || ''; c.secret = c.secret || ''; if (c.met === undefined) c.met = true; }
   st.timeline = st.timeline || {}; st.butterflies = st.butterflies || []; st.background = st.background || '';
+  ensureGenderStat(save.script);
+  if (!str(st.stats.gender)) { st.stats.gender = str(save.script.stats.find(x => x.key === 'gender')?.initial) || defaultGender() || '女'; G.migrated = true; }
   return save;
 }
 async function persist(save) { save.updatedAt = Date.now(); await DB.put('saves', save); }
 const playerName = save => str(save.state.stats.name) || '你';
+/* 主角性别：每个剧本都有一个“性别”属性；剧本没写就由引擎补上，默认值来自基础偏好 */
+function defaultGender() { return (S.prefs || DEFAULT_PREFS).femaleDefault ? '女' : ''; }
+function ensureGenderStat(script) {
+  if (!Array.isArray(script.stats)) script.stats = [];
+  if (script.stats.find(x => x.key === 'gender')) return;
+  const i = script.stats.findIndex(x => x.key === 'name');
+  script.stats.splice(i + 1, 0, { key: 'gender', label: '性别', type: 'text', ask: true, initial: str(script.gender) || '' });
+}
+const genderOf = save => str(save.state.stats.gender);
+function pronounFor(g) { g = str(g); return /^(女|女性|female|f)$/i.test(g) ? '她' : /^(男|男性|male|m)$/i.test(g) ? '他' : g ? 'TA' : '她'; }
+function genderRule(save) {
+  const g = genderOf(save); if (!g) return '';
+  const p = pronounFor(g);
+  return `主角「${playerName(save)}」的性别是${g}。叙述里用“你”指代主角；其他人物提到主角时用“${p}”${p === '她' ? '，称呼、对话和他人的反应都要符合女性的身份（例如“姑娘”“师妹”“这位小姐”），绝不能写成“他”' : p === '他' ? '，称呼、对话和他人的反应都要符合男性的身份' : ''}。`;
+}
 
 /* ---------------- 上下文拼装 ---------------- */
 const IMPORTANCE_ORDER = { major: 0, supporting: 1, minor: 2 };
@@ -1960,7 +1992,7 @@ function buildSystemPrompt(save) {
   const hasTimeline = (sc.milestones || []).length > 0;
   const prof = resolveProfile(save);
   const style = resolveStyle(save);
-  return `你是一款中文互动文字冒险游戏的叙事引擎，同时担任故事的主持人。玩家扮演主角「${playerName(save)}」，你负责描写世界、扮演所有其他人物，并根据玩家的行动推进剧情。
+  return `你是一款中文互动文字冒险游戏的叙事引擎，同时担任故事的主持人。玩家扮演主角「${playerName(save)}」${genderOf(save) ? `（${genderOf(save)}）` : ''}，你负责描写世界、扮演所有其他人物，并根据玩家的行动推进剧情。${genderRule(save) ? '\n' + genderRule(save) : ''}
 
 【通用原则】（与剧本规则冲突时，以剧本规则为准）
 1. 用第二人称“你”指代主角。只执行玩家本回合明确写出的行动与台词；不替主角做重大决定，不替主角补充额外台词，不替主角下内心结论。玩家输入的如果是一大段计划，只推进到第一个会产生变数的节点。
@@ -1980,8 +2012,9 @@ ${sc.world}
 ${sc.rules ? `\n【剧本规则】\n${sc.rules}\n` : ''}${style ? `\n【文风：${style.name}】\n${style.text}\n` : ''}${S.globalStyle ? `\n【玩家的写作习惯要求】\n${S.globalStyle}\n` : ''}
 【输出格式】（必须严格遵守）
 先直接输出本回合的剧情正文（纯文本，可分多段）。
-正文写完后，另起一行只写 ${STATE_MARK}，再输出一个 JSON 对象（不要用代码块包裹），记录本回合造成的状态变化。字段如下，没有变化的字段一律省略：
+正文写完后，另起一行只写 ${STATE_MARK}，再输出一个 JSON 对象（不要用代码块包裹），记录本回合造成的状态变化。choices 每回合必填；其余字段没有变化就省略：
 {
+  "choices": ["4 个主角下一步可能的行动，紧接着正文的最后一刻；前 3 个贴合主角的性格与处境、方向各不相同（说话、行动、观察、回避等），第 4 个出人意料、不太像主角平时会做的事；每个不超过 25 字，直接写行动或台词"],
   "stage": "新的阶段标签（时间 · 地点），有变化才写",
   "stats": {"属性key": 数值属性写变化量（如 5 或 -3，不写加号），文本属性写新的完整文本},
   "characters": [
@@ -1991,12 +2024,11 @@ ${sc.rules ? `\n【剧本规则】\n${sc.rules}\n` : ''}${style ? `\n【文风�
   "events": [{"title": "15字以内", "description": "60字以内", "characters": ["相关人物"], "consequence": "可能带来的后续影响", "weight": "major或minor"}],
   "resolved": ["本回合已经了结的关键事件标题"],
   "objectives": [{"title": "目标标题", "status": "active/completed/failed", "progress": 0到100, "description": "新增目标时填写"}],
-  "items": {"add": [{"name": "", "desc": "", "count": 1}], "remove": [{"name": "", "count": 1}]},${hasTimeline ? `
+  "items": {"add": [{"name": "", "desc": "", "count": 1}], "remove": [{"name": "", "count": 1}]}${hasTimeline ? `,
   "milestones": [{"id": "节点 id", "status": "active 或 done", "outcome": "本档实际发生的情况（done 时必填，写清与原著的不同）"}],
-  "butterflies": [{"text": "因为……，现在……", "canon": "原著中本应……", "ripple": "可能的连锁影响"}],` : ''}
-  "choices": ["3～4 个下一步可选行动，每个不超过 25 字，方向各不相同"]
+  "butterflies": [{"text": "因为……，现在……", "canon": "原著中本应……", "ripple": "可能的连锁影响"}]` : ''}
 }
-说明：可用的属性 key 有 ${statKeys}。${L.friendliness}（friendliness）表示信任与亲近，${L.affection}（affection）表示心动与恋慕，两者互相独立，范围都是 0～100，每回合变化一般不超过 ±10。只有会影响后续剧情的转折才记为 events，通常每回合 0～2 条。有名有姓、可能再次出现的人物首次登场时，用 "new": true 建卡，并为主要和次要人物写好 motive 与 backstory。"inner" 只在该人物对应的隐藏设定为空时补写。choices 必须提供：贴合主角的性格与处境，其中至少一个是出人意料、或不太像主角平时会做的选择。`;
+说明：可用的属性 key 有 ${statKeys}。${L.friendliness}（friendliness）表示信任与亲近，${L.affection}（affection）表示心动与恋慕，两者互相独立，范围都是 0～100，每回合变化一般不超过 ±10。只有会影响后续剧情的转折才记为 events，通常每回合 0～2 条。有名有姓、可能再次出现的人物首次登场时，用 "new": true 建卡，并为主要和次要人物写好 motive 与 backstory。"inner" 只在该人物对应的隐藏设定为空时补写。choices 永远不能省略；不要替主角做选择，只提供可能性。`;
 }
 
 function fmtCharacter(c, L, brief) {
@@ -2230,6 +2262,19 @@ function splitOutput(text) {
   }
   return { narrative: text.slice(0, i).trim(), delta: parseLooseJSON(text.slice(i + STATE_MARK.length)), hadMark: true };
 }
+/* 兼容各种写法的选项：字符串、对象、带编号的文本 */
+function normalizeChoices(raw) {
+  if (!raw) return [];
+  const arr = Array.isArray(raw) ? raw : typeof raw === 'string' ? raw.split(/\n+/) : [];
+  const out = [];
+  for (const c of arr) {
+    let t = typeof c === 'string' ? c : c && typeof c === 'object' ? (c.text || c.action || c.label || c.content || c.choice || '') : '';
+    t = str(t).replace(/^\s*(?:[（(]?[0-9一二三四五六七八九十A-Da-d][)）.、:：]|[-*•·])\s*/, '').replace(/^["“]|["”]$/g, '').trim();
+    if (t && !out.includes(t)) out.push(t.slice(0, 80));
+  }
+  return out.slice(0, 5);
+}
+const choicesOf = delta => normalizeChoices(delta && (delta.choices ?? delta.options ?? delta['选项'] ?? delta.actions ?? delta.next));
 function findChar(list, name) {
   const n = str(name); if (!n) return null;
   return list.find(c => c.name === n) || list.find(c => (c.aliases || []).includes(n)) || null;
@@ -2430,12 +2475,13 @@ async function playTurn(action) {
   const chips = applyDelta(save, delta, turn);
   const warns = [];
   if (!delta) warns.push(hadMark ? '状态更新的格式有误，本回合属性和人物没有变化。' : 'AI 没有按格式返回状态更新，本回合属性和人物没有变化。');
-  const choices = Array.isArray(delta?.choices) ? delta.choices.map(str).filter(Boolean).slice(0, 5) : [];
+  const choices = choicesOf(delta);
   save.state.turn = turn;
   save.log.push({ id: uid(), turn, action, narrative, choices, chips, warns, at: Date.now(), ...(delta ? {} : { raw: result.text.slice(-4000) }) });
   G.busy = false; G.stream = null; G.abort = null;
   await persist(save); await saveSettings();
   renderLog(); renderGameHeader(); setComposerBusy(false); scrollToEntryStart();
+  if (!choices.length) fillChoices(save.log[save.log.length - 1]);
   maybeSummarize();
 }
 
@@ -2519,13 +2565,57 @@ async function startOpening(save) {
     if (!narrative) G.error = { message: 'AI 没有写出开场的正文，可以重试。', action: '__opening__', raw: r.text };
     else {
       const chips = applyDelta(save, delta, 0);
-      save.log.push({ id: uid(), turn: 0, action: '', narrative, choices: (delta?.choices || []).map(str).filter(Boolean), chips, warns: delta ? [] : ['开场没有返回状态更新，人物和属性保持开局设定。'], at: Date.now(), ...(delta ? {} : { raw: r.text.slice(-4000) }) });
+      save.log.push({ id: uid(), turn: 0, action: '', narrative, choices: choicesOf(delta), chips, warns: delta ? [] : ['开场没有返回状态更新，人物和属性保持开局设定。'], at: Date.now(), ...(delta ? {} : { raw: r.text.slice(-4000) }) });
     }
     await persist(save); await saveSettings();
   } catch (e) {
     if (e.name !== 'AbortError') G.error = { message: e.message || String(e), action: '__opening__', raw: e.raw };
   }
   G.busy = false; G.stream = null; G.abort = null; renderLog(); setComposerBusy(false); renderGameHeader();
+  const last = save.log[save.log.length - 1];
+  if (last && str(last.narrative) && !last.choices?.length) fillChoices(last);
+}
+/* ---------------- 选项：缺失时补生成、换一批 ---------------- */
+async function genChoices(save, entry, avoid = []) {
+  const st = save.state, sc = save.script;
+  const statLine = sc.stats.filter(d => d.key !== 'name').map(d => d.type === 'number' ? `${d.label}${Math.round(num(st.stats[d.key]))}` : (str(st.stats[d.key]).length <= 24 ? `${d.label}：${str(st.stats[d.key]) || '—'}` : '')).filter(Boolean).join('｜');
+  const around = st.characters.filter(c => c.met !== false && c.lastTurn >= entry.turn - 1).map(c => `${c.name}（${c.relation || c.identity}，${sc.relationLabels.friendliness}${Math.round(c.friendliness)}）`).join('、');
+  const openEv = st.events.filter(e => !e.resolved).slice(-5).map(e => e.title).join('、');
+  const r = await chatOnce([
+    { role: 'system', content: '你是互动小说的选项设计者，为玩家提供下一步行动的选项。你只输出 JSON。' },
+    { role: 'user', content: `剧本：${sc.title}
+主角：${playerName(save)}${genderOf(save) ? `（${genderOf(save)}）` : ''}
+主角性格：${st.persona || '（未设定）'}
+${st.background ? `主角身世（节选）：${st.background.slice(0, 240)}\n` : ''}当前阶段：${st.stage || '—'}
+主角状态：${statLine}
+${around ? `身边的人物：${around}\n` : ''}${openEv ? `悬而未决的事：${openEv}\n` : ''}
+【刚刚发生的剧情】
+${entry.action ? `主角的行动：${entry.action}\n` : ''}${entry.narrative}
+${avoid.length ? `\n上一批选项（这次换一批不同的）：${avoid.join('；')}\n` : ''}
+请给出 4 个主角接下来可能的行动：
+1. 紧接着上面剧情的最后一刻，是主角此刻真的能做的事；
+2. 前 3 个贴合主角的性格与处境，方向各不相同（例如说话、行动、观察、回避）；
+3. 第 4 个出人意料，不太像${pronounFor(genderOf(save))}平时会做的事；
+4. 每个不超过 25 字，直接写行动或台词，不要编号，不要替其他人物做决定。
+只输出 {"choices": ["…", "…", "…", "…"]}` },
+  ], { temperature: 1.1, maxTokens: 1200, helper: true });
+  addUsage(save, r.usage);
+  const out = normalizeChoices(parseLooseJSON(r.text)?.choices);
+  if (!out.length) throw new Error('AI 没有给出可用的选项');
+  return out;
+}
+async function fillChoices(entry, regenerate = false) {
+  const save = G.save; if (!save || !entry || G.choicesLoading) return;
+  G.choicesLoading = entry.id; G.choicesError = null; editingChoice = null; renderLog();
+  try {
+    const out = await genChoices(save, entry, regenerate ? entry.choices || [] : []);
+    if (G.save === save && save.log.includes(entry)) { entry.choices = out; await persist(save); await saveSettings(); }
+  } catch (e) {
+    G.choicesError = { id: entry.id, message: String(e.message || e).slice(0, 80) };
+  } finally {
+    entry.choicesTried = true;
+    G.choicesLoading = null; renderLog(); scrollLogToEnd();
+  }
 }
 async function regenOpening() {
   const save = G.save; if (!save || G.busy) return;
@@ -2810,7 +2900,7 @@ async function openSetup(scriptId) {
   const optionOf = f => f.options.find(o => o.id === picks[f.key]) || (aiOpts[f.key] || []).find(o => o.id === picks[f.key]);
   const curName = () => str(inputs.name?.value) || '主角';
   const descOf = f => fillName(optionOf(f)?.desc || '', curName());
-  const ctxFor = skipKey => ({ name: str(inputs.name?.value), others: fields.filter(x => x.key !== skipKey).map(x => ({ label: x.label, option: optionOf(x) })), persona: persona?.value || '' });
+  const ctxFor = skipKey => ({ name: str(inputs.name?.value), gender: str(inputs.gender?.value), others: fields.filter(x => x.key !== skipKey).map(x => ({ label: x.label, option: optionOf(x) })), persona: persona?.value || '' });
   const wish = h('textarea', { id: 'setup-wish', rows: 2, placeholder: '可选，对下面所有 ✨ 生成都生效。\n例如：治疗系；出身贫寒；和胡列娜是死对头' });
   if (aiOn) body.append(h('p', { class: 'small muted', style: 'margin:0 0 10px;line-height:1.7' }, '每一项都可以单独换：从下拉框里挑，🎲 从预设里随机抽，✨ 让 AI 现编一个新的（会参考你已经定下的其他几项）。AI 编出来的选项会留在下拉框里，下次开局还能选。'),
     h('div', { class: 'field' }, h('label', { for: 'setup-wish' }, '给 AI 的要求'), wish));
@@ -2822,8 +2912,9 @@ async function openSetup(scriptId) {
     try { await fn(); } catch (e) { toast('生成失败：' + String(e.message || e).slice(0, 70), 4000); }
     finally { btn.disabled = false; btn.textContent = old; }
   }
-  // 名字
+  // 名字、性别等需要玩家填写的项
   for (const st of script.stats.filter(x => x.type === 'text' && (x.ask || x.key === 'name'))) {
+    if (st.key === 'gender') { body.append(genderField(st)); continue; }
     const inp = h('input', { id: 'setup-' + st.key, placeholder: st.placeholder || '' }); inp.value = st.initial || '';
     inputs[st.key] = inp;
     const isName = st.key === 'name';
@@ -2832,6 +2923,22 @@ async function openSetup(scriptId) {
     if (dice && !inp.value) inp.value = names[Math.floor(Math.random() * names.length)];
     inp.addEventListener('input', () => refreshAuto());
     body.append(h('div', { class: 'field' }, h('label', { for: 'setup-' + st.key }, st.label), dice || spark ? h('div', { class: 'row', style: 'flex-wrap:nowrap' }, inp, dice, spark) : inp));
+  }
+  function genderField(st) {
+    const inp = h('input', { id: 'setup-gender', placeholder: '自己填写，例如：女（跨性别）' });
+    inp.value = str(st.initial) || defaultGender();
+    inputs.gender = inp;
+    if (st.fixed) return h('div', { class: 'field' }, h('label', {}, st.label), h('div', { style: 'padding:4px 0 2px' }, h('b', {}, inp.value), h('span', { class: 'small muted' }, '　这个剧本的主角性别是固定的')));
+    const btns = {};
+    const seg = h('div', { class: 'seg', role: 'group' }, ...['女', '男', '其他'].map(v => (btns[v] = h('button', { 'aria-pressed': 'false', onclick: () => pick(v) }, v))));
+    const pick = v => {
+      for (const [k, b] of Object.entries(btns)) b.setAttribute('aria-pressed', String(k === v));
+      if (v === '其他') { inp.hidden = false; if (['女', '男'].includes(inp.value)) inp.value = ''; inp.focus(); } else { inp.hidden = true; inp.value = v; }
+      refreshAuto();
+    };
+    inp.addEventListener('input', () => refreshAuto());
+    setTimeout(() => pick(['女', '男'].includes(inp.value) ? inp.value : inp.value ? '其他' : '女'), 0);
+    return h('div', { class: 'field' }, h('label', {}, st.label), seg, inp, h('div', { class: 'hint' }, 'AI 会按这个性别来写别人怎么称呼你、怎么对待你。'));
   }
   // 开局表的每一项
   if (fields.length) {
@@ -2884,7 +2991,7 @@ async function openSetup(scriptId) {
   let bgDirty = false;
   bg.addEventListener('input', () => { bgDirty = true; });
   const bgBtn = h('button', { class: 'btn sm', onclick: () => withBusy(bgBtn, async () => {
-    bg.value = await genBackground(script, fields.map(f => `【${f.label}】${(optionOf(f)?.label || '').replace(/^✨\s*/, '')}：${descOf(f)}`).join('\n'), str(inputs.name?.value), persona.value);
+    bg.value = await genBackground(script, fields.map(f => `【${f.label}】${(optionOf(f)?.label || '').replace(/^✨\s*/, '')}：${descOf(f)}`).join('\n'), str(inputs.name?.value), persona.value, str(inputs.gender?.value));
     bgDirty = true; await saveSettings();
   }) }, '✨ AI 写成完整身世');
   if (fields.length) body.append(h('div', { class: 'field' }, h('label', { for: 'setup-bg' }, '身世'), bg,
@@ -2906,6 +3013,7 @@ async function openSetup(scriptId) {
   body.append(h('div', { class: 'row end', style: 'margin-top:8px' }, h('button', { class: 'btn primary', id: 'btn-start', onclick: async () => {
     const vals = {}; for (const [k, i] of Object.entries(inputs)) vals[k] = str(i.value);
     if (!vals.name) { toast('先给主角起个名字'); inputs.name?.focus(); return; }
+    if (inputs.gender && !vals.gender) { toast('选一下主角的性别'); return; }
     if (!S.apiKey && !script.opening) { toast('这个剧本需要 AI 生成开场，请先在设置里填写密钥'); return; }
     if (fields.length && !bgDirty) refreshAuto();
     await setScriptPrefs(script.id, setupPrefs);
@@ -2933,6 +3041,7 @@ function fieldSchema(f) {
 function aiTemp() { return clamp(Number(S.temperature) || 1.3, 1.1, 1.5); }
 function ctxText(script, ctx) {
   const lines = [`姓名：${ctx.name || '（未定）'}`];
+  if (ctx.gender) lines.push(`性别：${ctx.gender}（第三人称用“${pronounFor(ctx.gender)}”）`);
   for (const x of ctx.others || []) if (x.option) lines.push(`${x.label}：${x.option.label.replace(/^✨\s*/, '')}——${fillName(x.option.desc, ctx.name || '主角')}`);
   if (ctx.persona) lines.push(`性格：${ctx.persona}`);
   return lines.join('\n');
@@ -2947,7 +3056,7 @@ async function genFieldOption(script, f, ctx, wish) {
   const hist = ((S.aiOptions?.[script.id]?.[f.key]) || []).map(o => o.label).slice(-8);
   const keyDocs = [
     '"label"：选项名，15 字以内',
-    '"desc"：60～150 字的说明，用 {name} 指代主角，第三人称',
+    `"desc"：60～150 字的说明，用 {name} 指代主角，第三人称用“${pronounFor(ctx.gender)}”`,
     statDefs.length ? `"stats"：只能包含这些属性：${statDefs.map(d => `${d.key}（${d.label}，${d.type === 'number' ? '数字' + (d.min !== undefined || d.max !== undefined ? `，${d.min ?? ''}～${d.max ?? ''}` : '') : '文本'}）`).join('、')}` : null,
     sch.keys.includes('characters') ? '"characters"：0～1 个与这个设定相关的原创人物，字段与示例相同（含只给 AI 看的 motive、backstory、secret），"met" 为 true' : null,
     sch.keys.includes('overrides') ? `"overrides"：主角开局时已经认识的原著人物（0～3 人），键为人物名，只能从这些人里选：${roster.join('、')}；值为 {"met": true, "relation": "关系", "friendliness": 0～100, "opinion": "此人对主角的看法"}` : null,
@@ -3018,14 +3127,14 @@ async function genNameText(script, ctx, wish) {
   return name;
 }
 
-async function genBackground(script, picksText, name, persona) {
-  const pron = script.creation?.pronoun || '她';
+async function genBackground(script, picksText, name, persona, gender) {
+  const pron = pronounFor(gender || '女');
   const r = await chatOnce([
     { role: 'system', content: '你是互动小说的角色设定作者，擅长为主角写有细节、有遗憾、有牵挂的身世。' },
     { role: 'user', content: `剧本：${script.title}
 剧本简介：${script.intro}
 ${script.creation?.backgroundGuide ? `写作要求：${script.creation.backgroundGuide}\n` : ''}
-主角名字：${name || '（未定）'}
+主角名字：${name || '（未定）'}${gender ? `（${gender}）` : ''}
 主角性格：${persona}
 随机抽到的开局设定：
 ${picksText}
@@ -3049,6 +3158,8 @@ async function enterGame(save) {
   showView('game');
   renderGameHeader(); renderLog(); renderPaceBar(); setComposerBusy(G.busy);
   requestAnimationFrame(() => scrollLogToEnd(true));
+  const last = save.log[save.log.length - 1];
+  if (last && str(last.narrative) && !last.choices?.length && !last.choicesTried && S.apiKey && !G.busy) fillChoices(last);
 }
 function renderPaceBar() {
   const sv = G.save, bar = $('#pace-bar'); if (!sv) return;
@@ -3101,11 +3212,7 @@ function renderLog() {
     for (const w of e.warns || []) el.append(h('div', { class: 'warn-line' }, w));
     if (e.raw && e.warns?.length) el.append(rawViewer(e.raw));
     if (isLast && !G.busy && !G.stream) {
-      if (e.choices?.length) {
-        el.append(h('div', { class: 'choices' }, ...e.choices.map(c => h('div', { class: 'choice' },
-          h('button', { onclick: () => playTurn(c) }, c),
-          h('button', { class: 'edit', 'aria-label': '修改后再发送', title: '修改后再发送', onclick: () => { const a = $('#action'); a.value = c; autoGrow(); a.focus(); } }, '✎')))));
-      }
+      if (str(e.narrative)) el.append(choicesBlock(e));
       if (e.turn === 0 && !sv.script.opening && (snapTurns.has(0) || !str(e.narrative))) el.append(h('div', { class: 'tools' },
         h('button', { class: 'btn sm ghost', onclick: async () => { if (await ask('重新生成开场', '当前的开场会被换掉，AI 会按同样的开局设定重新写一个。', '重新生成')) regenOpening(); } }, '重新生成开场')));
       if (e.turn > 0) el.append(h('div', { class: 'tools' },
@@ -3136,6 +3243,37 @@ function renderLog() {
 function rawViewer(raw) {
   return h('details', { class: 'fold', style: 'margin-top:8px' }, h('summary', {}, '查看 AI 的原始回复'),
     h('pre', { style: 'white-space:pre-wrap;font-size:12px;line-height:1.55;margin:8px 0 0;max-height:40vh;overflow:auto' }, str(raw) || '（空）'));
+}
+let editingChoice = null; // {id, idx}
+function choicesBlock(e) {
+  const box = h('div', { class: 'choices' });
+  const loading = G.choicesLoading === e.id;
+  box.append(h('div', { class: 'choices-head' }, h('span', {}, '接下来，你要……'),
+    e.choices?.length && !loading ? h('button', { class: 'link-btn', onclick: () => fillChoices(e, true) }, '↻ 换一批') : null));
+  if (loading) box.append(h('div', { class: 'streaming-hint' }, h('span', { class: 'dots' }, h('i'), h('i'), h('i')), h('span', {}, e.choices?.length ? '正在换一批选项…' : '正在想你接下来可以怎么做…')));
+  else if (e.choices?.length) {
+    e.choices.forEach((c, i) => {
+      if (editingChoice && editingChoice.id === e.id && editingChoice.idx === i) {
+        const ta = h('textarea', { class: 'choice-edit', rows: 2, id: 'choice-edit' }); ta.value = c;
+        const send = () => { const v = str(ta.value); if (!v) { ta.focus(); return; } editingChoice = null; playTurn(v); };
+        ta.addEventListener('keydown', ev => { if (ev.key === 'Enter' && (ev.metaKey || ev.ctrlKey)) { ev.preventDefault(); send(); } });
+        box.append(h('div', { class: 'choice editing' }, ta, h('div', { class: 'row end', style: 'padding:0 8px 8px' },
+          h('button', { class: 'btn sm ghost', onclick: () => { editingChoice = null; renderLog(); } }, '取消'),
+          h('button', { class: 'btn sm primary', onclick: send }, '发送'))));
+        setTimeout(() => { const t = $('#choice-edit'); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } }, 30);
+      } else {
+        box.append(h('div', { class: 'choice' },
+          h('button', { onclick: () => playTurn(c) }, c),
+          h('button', { class: 'edit', 'aria-label': '在这个选项的基础上修改', title: '在这个选项的基础上修改', onclick: () => { editingChoice = { id: e.id, idx: i }; renderLog(); } }, '✎')));
+      }
+    });
+  } else {
+    const err = G.choicesError && G.choicesError.id === e.id ? G.choicesError.message : '';
+    box.append(h('div', { class: 'small muted', style: 'margin:2px 0 4px' }, err ? `选项没生成出来：${err}` : '这一回合没有选项。'),
+      h('button', { class: 'btn sm', onclick: () => fillChoices(e) }, '生成选项'));
+  }
+  box.append(h('button', { class: 'choice-custom', onclick: () => { editingChoice = null; const a = $('#action'); a.focus(); a.scrollIntoView({ block: 'nearest' }); } }, '✍️ 自己写一个行动…'));
+  return box;
 }
 let streamRAF = 0;
 function updateStreamView() {

@@ -551,6 +551,8 @@ SCRIPT = {
 }
 
 if __name__ == "__main__":
+    import os
     out = json.dumps(SCRIPT, ensure_ascii=False, indent=1)
-    open("../scripts/douluo-wuhundian.json", "w", encoding="utf-8").write(out)
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    open(os.path.join(root, "scripts", "douluo-wuhundian.json"), "w", encoding="utf-8").write(out)
     print(len(out), "chars;", len(CHARS), "characters;", sum(len(f["options"]) for f in CREATION["fields"]), "options; version", VERSION)

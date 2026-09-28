@@ -310,7 +310,7 @@ details.fold summary{cursor:pointer;color:var(--muted);font-size:13.5px}
    ========================================================= */
 
 const APP_VERSION = 1;
-const BUILD = '2026-09-29.1'; // 网页版本号：每次发布都改一下，打开着的页面会拿它和网站上的最新版比较
+const BUILD = '2026-09-29.2'; // 网页版本号：每次发布都改一下，打开着的页面会拿它和网站上的最新版比较
 const STATE_MARK = '###STATE###';
 
 /* ---------------- 工具 ---------------- */
@@ -2024,12 +2024,32 @@ function migrateSave(save) {
     }
     for (const k of ['length', 'pace', 'profileId', 'profileSnapshot', 'style', 'useGlobalPrefs']) delete st[k];
   }
-  for (const c of st.characters) { c.traits = c.traits || []; c.motive = c.motive || ''; c.backstory = c.backstory || ''; c.secret = c.secret || ''; if (c.met === undefined) c.met = true; }
-  st.timeline = st.timeline || {}; st.butterflies = st.butterflies || []; st.background = st.background || '';
   for (const [id, old] of Object.entries(OLD_PERSONA_TEXTS)) if (str(st.persona) === old) { st.persona = PERSONA_PRESETS.find(p => p.id === id).text; G.migrated = true; }
   ensureGenderStat(save.script);
-  if (!str(st.stats.gender)) { st.stats.gender = str(save.script.stats.find(x => x.key === 'gender')?.initial) || defaultGender() || '女'; G.migrated = true; }
+  // 当前状态和每一个回退快照都补齐（快照恢复出来的状态也要完整）
+  for (const x of [st, ...(save.snapshots || []).map(sn => sn.state).filter(Boolean)]) {
+    if (!str(x.stats?.gender)) G.migrated = true;
+    normalizeState(x, save.script);
+  }
   return save;
+}
+/* 状态的基本结构：人物字段、时间线、主角性别 */
+function normalizeState(st, script) {
+  st.stats = st.stats || {}; st.characters = st.characters || [];
+  for (const c of st.characters) { c.traits = c.traits || []; c.motive = c.motive || ''; c.backstory = c.backstory || ''; c.secret = c.secret || ''; if (c.met === undefined) c.met = true; }
+  st.timeline = st.timeline || {}; st.butterflies = st.butterflies || []; st.background = st.background || '';
+  if (!str(st.stats.gender)) st.stats.gender = scriptGender(script) || defaultGender() || '女';
+  return st;
+}
+/* 主角的姓名和性别由玩家决定：回退剧情时保持现在的，AI 也不改 */
+const IDENTITY_STATS = ['name', 'gender'];
+/* 从快照恢复：剧情进度回到快照那一刻，本局设定和主角身份保持现在的 */
+function restoreState(save, snapState) {
+  const cur = save.state, next = clone(snapState);
+  for (const k of PLAY_KEYS) next[k] = cur[k];
+  next.stats = next.stats || {};
+  for (const k of IDENTITY_STATS) if (str(cur.stats?.[k])) next.stats[k] = cur.stats[k];
+  save.state = normalizeState(next, save.script);
 }
 async function persist(save) { save.updatedAt = Date.now(); await DB.put('saves', save); }
 const playerName = save => str(save.state.stats.name) || '你';
@@ -2041,7 +2061,8 @@ function ensureGenderStat(script) {
   const i = script.stats.findIndex(x => x.key === 'name');
   script.stats.splice(i + 1, 0, { key: 'gender', label: '性别', type: 'text', ask: true, initial: str(script.gender) || '' });
 }
-const genderOf = save => str(save.state.stats.gender);
+const scriptGender = script => str((script?.stats || []).find(x => x.key === 'gender')?.initial);
+const genderOf = save => str(save.state.stats.gender) || scriptGender(save.script) || defaultGender();
 function pronounFor(g) { g = str(g); return /^(女|女性|female|f)$/i.test(g) ? '她' : /^(男|男性|male|m)$/i.test(g) ? '他' : g ? 'TA' : '她'; }
 function genderRule(save) {
   const g = genderOf(save); if (!g) return '';
@@ -2062,7 +2083,7 @@ function globalPrefsText(save) {
 }
 function buildSystemPrompt(save) {
   const sc = save.script, st = save.state, L = sc.relationLabels;
-  const statKeys = sc.stats.map(x => `${x.key}（${x.label}，${x.type === 'number' ? '数值' + (x.max !== undefined ? `，范围 ${x.min ?? 0}～${x.max}` : '') : '文本'}）`).join('、');
+  const statKeys = sc.stats.filter(x => !IDENTITY_STATS.includes(x.key)).map(x => `${x.key}（${x.label}，${x.type === 'number' ? '数值' + (x.max !== undefined ? `，范围 ${x.min ?? 0}～${x.max}` : '') : '文本'}）`).join('、');
   const prefs = globalPrefsText(save);
   const hasTimeline = (sc.milestones || []).length > 0;
   const prof = resolveProfile(save);
@@ -2379,7 +2400,7 @@ function applyDelta(save, delta, turn) {
   if (delta.stats && typeof delta.stats === 'object') {
     for (const [k, v] of Object.entries(delta.stats)) {
       const def = sc.stats.find(x => x.key === k || x.label === k);
-      if (!def) continue;
+      if (!def || IDENTITY_STATS.includes(def.key)) continue;
       if (def.type === 'number') {
         const d = num(v, 0); if (!d) continue;
         const before = num(st.stats[def.key]);
@@ -2712,8 +2733,7 @@ async function regenOpening() {
   // 旧版本留下的空开场没有快照，但它也没有改动过任何状态，可以直接用当前状态
   const snap = (save.snapshots || []).find(x => x.turn === 0) || (save.log.length === 1 && !str(save.log[0].narrative) ? { turn: 0, state: clone(save.state), logLen: 0 } : null);
   if (!snap) { toast('找不到开场前的状态，无法重新生成'); return; }
-  const keep = {}; for (const k of PLAY_KEYS) keep[k] = save.state[k];
-  save.state = Object.assign(clone(snap.state), keep);
+  restoreState(save, snap.state);
   save.log = []; save.snapshots = [snap]; G.error = null;
   await persist(save); renderLog(); renderGameHeader();
   await startOpening(save);
@@ -2728,9 +2748,7 @@ async function rewindTo(turn, silent) {
   const snap = (save.snapshots || []).find(s => s.turn === turn);
   if (!snap) { if (!silent) toast('这一回合的存档快照已经不在了，无法回到这里'); return false; }
   const last = save.log.find(e => e.turn === turn);
-  // 玩法设置不随剧情回退
-  const keep = {}; for (const k of PLAY_KEYS) keep[k] = save.state[k];
-  save.state = Object.assign(clone(snap.state), keep);
+  restoreState(save, snap.state); // 本局设定和主角身份不随剧情回退
   save.log = save.log.filter(e => e.turn < turn);
   save.snapshots = save.snapshots.filter(s => s.turn < turn);
   G.error = null;

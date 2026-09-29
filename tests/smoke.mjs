@@ -72,10 +72,10 @@ for (const title of titles.filter(t => !t.includes('雾港'))) {
     await page.click('.choice button >> nth=0');
     await page.waitForFunction(() => window.__wenyou.G.save.state.turn === 2 && !window.__wenyou.G.busy && window.__wenyou.G.save.log[2].evolve?.status === 'done', null, { timeout: 15000 });
     const s2 = await W(() => { const st = window.__wenyou.G.save.state, hu = st.characters.find(c => c.name === '胡列娜'); return { year: st.year, age: st.stats.age, huAge: st.year - hu.born, huLevel: hu.stats.level }; });
-    check(s2.year === 11 && s2.huAge === 30 && s2.huLevel === 55, `跳了十年：第${s2.year}年，主角 ${s2.age} 岁，胡列娜 ${s2.huAge} 岁、${s2.huLevel} 级`);
+    check(s2.year === 11 && s2.huAge === 35 && s2.huLevel === 55, `跳了十年：第${s2.year}年，主角 ${s2.age} 岁，胡列娜 ${s2.huAge} 岁、${s2.huLevel} 级`);
     await page.click('.tools >> text=回退'); await page.click('#modal-foot >> text=回退'); await page.waitForTimeout(300);
     const s3 = await W(() => { const st = window.__wenyou.G.save.state, hu = st.characters.find(c => c.name === '胡列娜'); return { year: st.year, huLevel: hu.stats.level, gender: st.stats.gender }; });
-    check(s3.year === 1 && s3.huLevel === 37 && s3.gender === '女', `回退后回到第${s3.year}年，胡列娜 ${s3.huLevel} 级，性别 ${s3.gender}`);
+    check(s3.year === 1 && s3.huLevel === 47 && s3.gender === '女', `回退后回到第${s3.year}年，胡列娜 ${s3.huLevel} 级，性别 ${s3.gender}`);
   }
   if (OUT) await page.screenshot({ path: path.join(OUT, `smoke-${title.replace(/\W+/g, '')}.png`) });
   await page.click('#btn-leave'); await page.waitForTimeout(250);

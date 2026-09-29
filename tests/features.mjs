@@ -177,6 +177,21 @@ check((await page.inputValue('#action')).includes('前情提醒：开场'), '引
 await page.fill('#action', '');
 await page.click('#btn-leave'); await page.waitForTimeout(200);
 
+console.log('【开局时间】');
+const r5 = await W(async () => {
+  const { newSave, getScript } = window.__wenyou; const sc = await getScript('douluo-wuhundian');
+  const f = k => sc.creation.fields.find(x => x.key === k);
+  const pick = (k, id) => f(k).options.find(o => o.id === id);
+  const sv = newSave(sc, { name: '测试', gender: '女' }, '', '', { options: { era: pick('era', 'e-contest'), start: pick('start', 's-wuhun'), talent: pick('talent', 't-full') } });
+  const st = sv.state, hu = st.characters.find(c => c.name === '胡列娜'), ts = st.characters.find(c => c.name === '唐三');
+  return { year: st.year, stage: st.stage, m1: st.timeline.m1?.status, m5: st.timeline.m5?.status, huAge: st.year - hu.born, huLevel: hu.stats.level, huMet: hu.met, huRel: hu.relation, tsLevel: ts.stats.level, tsNow: ts.now, age: st.stats.age, level: st.stats.level };
+});
+check(r5.year === 3 && /初春/.test(r5.stage), `精英大赛前夕：第${r5.year}年，${r5.stage}`);
+check(r5.m1 === 'done' && r5.m5 === 'active', '已经发生的主线标为 done，大赛预选赛 active');
+check(r5.huAge === 27 && r5.huLevel > 47 && r5.tsLevel > 29, `胡列娜 ${r5.huAge} 岁 ${r5.huLevel} 级，唐三 ${r5.tsLevel} 级`);
+check(r5.huMet === true && r5.huRel === '学院的前辈', '起点给的关系和开局时间给的实力合并在一起');
+check(r5.age === 19 && r5.level === 31, `天赋按年龄取值：主角 ${r5.age} 岁 ${r5.level} 级`);
+
 console.log('【固定开场的剧本】');
 await startGame('雾港');
 check(!lastUser.includes('这次开场的情境'), '雾港来信的开场不再随机抽情境');

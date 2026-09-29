@@ -137,6 +137,25 @@ const r4 = await W(() => {
 check(r4.persona.startsWith('好胜心强，讨厌被人看不起'), '旧版性格文字换成新版');
 check(r4.dealt && r4.n === 2 && r4.same, '旧存档补上潜质，回退快照里是同一组');
 
+console.log('【按人物和类型找回旧事件】');
+const r6 = await W(() => {
+  const { G, applyDelta, buildUserPrompt } = window.__wenyou; const sv = G.save, st = sv.state;
+  const names = st.characters.map(c => c.name);
+  const [A, B] = [names[0], names[1]];
+  st.events = [];
+  for (let i = 1; i <= 30; i++) st.events.push({ id: 'e' + i, turn: i, title: `旧事${i}`, description: '', characters: [i === 3 ? A : B], tags: i === 5 ? ['情感'] : ['任务'], consequence: '', weight: 'minor', resolved: true });
+  st.turn = 31;
+  applyDelta(sv, { focus: { characters: [A], tags: ['情感'] }, events: [{ title: '新事', characters: [A], tags: ['情感', '团队'] }] }, 31);
+  const p = buildUserPrompt(sv, '随便走走');
+  const sect = p.split('【关键事件 · 和眼下相关的旧事】')[1] || '';
+  const p2 = buildUserPrompt(sv, `去找${B}`);
+  return { focus: st.focus, newTags: st.events.find(e => e.title === '新事').tags, has3: /旧事3：/.test(sect.split('【')[0]), has5: /旧事5：/.test(sect.split('【')[0]), has10: /旧事10：/.test(sect.split('【')[0]), recent: p.includes('旧事30：'), named: (p2.split('【关键事件 · 和眼下相关的旧事】')[1] || '').includes('旧事24：') };
+});
+check(r6.focus.characters.length === 1 && r6.newTags.join() === '情感,团队', '记下焦点和事件类型');
+check(r6.has3 && r6.has5 && !r6.has10, '按焦点人物、类型找回了第 3、5 回合的旧事，没带无关的');
+check(r6.recent, '最近了结的事件照常发送');
+check(r6.named, '行动里点到的人物，相关旧事也会被找回');
+
 console.log('【划线收藏】');
 await W(() => {
   const p = document.querySelector('#log .entry .narr p');

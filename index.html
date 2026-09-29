@@ -311,7 +311,7 @@ details.fold summary{cursor:pointer;color:var(--muted);font-size:13.5px}
    ========================================================= */
 
 const APP_VERSION = 1;
-const BUILD = '2026-09-29.5'; // 网页版本号：每次发布都改一下，打开着的页面会拿它和网站上的最新版比较
+const BUILD = '2026-09-29.6'; // 网页版本号：每次发布都改一下，打开着的页面会拿它和网站上的最新版比较
 const STATE_MARK = '###STATE###';
 
 /* ---------------- 工具 ---------------- */
@@ -7227,21 +7227,22 @@ ${sc.rules ? `\n【剧本规则】\n${sc.rules}\n` : ''}${style ? `\n【文风�
     {"name": "已有人物名", ${cs.length ? '"stats": {"基本信息key": "新的值"}, ' : ''}"friendliness": 变化量, "affection": 变化量, "opinion": "此刻对主角的看法（一句话）", "relation": "新的关系标签", "status": "在世/离开/受伤/死亡等", "note": "本回合此人与主角之间值得长期记住的事（一句话）", "now": "新的现状（变了才写）", "inner": {"motive": "立场与动机", "backstory": "过往经历（性格的来源）", "secret": "秘密"}, "seeds": [{"seed": "本局潜质", "text": "定下的具体内容"}], "reveal": [{"title": "词条名，8字以内", "text": "主角了解到的内容，60字以内", "seed": "对应的本局潜质（有的话）"}]},
     {"name": "首次登场的人物", "new": true, "gender": "性别", "age": 年龄（数字）, ${cs.length ? '"stats": {"基本信息key": "值"}, ' : ''}"identity": "身份", "appearance": "外貌", "personality": "性格", "relation": "与主角的关系", "brief": "一句话简介", "now": "现状", "opinion": "对主角的看法", "friendliness": 0到100的初始值, "affection": 0到100的初始值, "importance": "major/supporting/minor", "motive": "立场与动机（主角尚不知道）", "backstory": "过往经历，性格的来源（主角尚不知道）", "secret": "秘密（可省略）"}
   ],
-  "events": [{"title": "15字以内", "description": "60字以内", "characters": ["相关人物"], "consequence": "可能带来的后续影响", "weight": "major或minor"}],
+  "events": [{"title": "15字以内", "description": "60字以内", "characters": ["相关人物"], "tags": ["类型，可多选：${EVENT_TAGS.join('、')}"], "consequence": "可能带来的后续影响", "weight": "major或minor"}],
+  "focus": {"characters": ["下一幕围绕的人物"], "tags": ["下一幕涉及的事件类型"]},
   "resolved": ["本回合已经了结的关键事件标题"],
   "objectives": [{"title": "目标标题", "status": "active/completed/failed", "progress": 0到100, "description": "新增目标时填写"}],
   "items": {"add": [{"name": "", "desc": "", "count": 1}], "remove": [{"name": "", "count": 1}]}${hasTimeline ? `,
   "milestones": [{"id": "节点 id", "status": "active 或 done", "outcome": "本档实际发生的情况（done 时必填，写清与原著的不同）"}],
   "butterflies": [{"text": "因为……，现在……", "canon": "原著中本应……", "ripple": "可能的连锁影响"}]` : ''}
 }
-说明：主角可用的属性 key 有 ${statKeys}。${cs.length ? `人物的基本信息 key 有 ${cs.map(d => `${d.key}（${d.label}${d.type === 'number' ? '，数值' : ''}）`).join('、')}，写新的值。` : ''}${L.friendliness}（friendliness）表示信任与亲近，${L.affection}（affection）表示心动与恋慕，两者互相独立，范围都是 0～100，每回合变化一般在 ±10 以内。会影响后续剧情的转折才记为 events，通常每回合 0～2 条。有名有姓、可能再次出现的人物首次登场时，用 "new": true 建卡，并为主要和次要人物写好 motive 和 backstory。"inner" 用来补写这个人物还空着的隐藏设定。只更新现状、基本信息或状态的人物，主角仍然不认识他。choices 给出主角接下来可以做的几种行动，由玩家来选。`;
+说明：主角可用的属性 key 有 ${statKeys}。${cs.length ? `人物的基本信息 key 有 ${cs.map(d => `${d.key}（${d.label}${d.type === 'number' ? '，数值' : ''}）`).join('、')}，写新的值。` : ''}${L.friendliness}（friendliness）表示信任与亲近，${L.affection}（affection）表示心动与恋慕，两者互相独立，范围都是 0～100，每回合变化一般在 ±10 以内。会影响后续剧情的转折才记为 events，通常每回合 0～2 条，每条写上涉及的人物和类型。focus 每回合都写：接下来这一幕围绕哪些人物、涉及哪些类型的事，程序按它从旧事件里找出相关的发给你。有名有姓、可能再次出现的人物首次登场时，用 "new": true 建卡，并为主要和次要人物写好 motive 和 backstory。"inner" 用来补写这个人物还空着的隐藏设定。只更新现状、基本信息或状态的人物，主角仍然不认识他。choices 给出主角接下来可以做的几种行动，由玩家来选。`;
 }
 
 const trimEnd = t => str(t).replace(/[。；;，,\s]+$/, ''); // 拼接多段文字时去掉末尾标点，免得出现“。；”
 /* 本局随机潜质（还没被主角发现的）：定了具体内容的写内容，没定的等 AI 来定 */
 const openSeeds = c => (c.seeds || []).filter(x => !x.revealed);
 const seedsText = c => openSeeds(c).map(x => x.text ? `${x.seed}：${trimEnd(x.text)}` : `${x.seed}（具体内容还没定）`).join('；');
-function fmtCharacter(c, L, brief, sc, year) {
+function fmtCharacter(c, L, brief, sc, year, focusSet) {
   const basic = sc ? `  基本信息：${charBasicText(sc, c, year, brief)}` : '';
   const now = c.now ? `  现状：${c.now}` : '';
   if (c.met === false) {
@@ -7267,7 +7268,7 @@ function fmtCharacter(c, L, brief, sc, year) {
   if (c.appearance) lines.push(`  外貌：${c.appearance}`);
   if (c.brief) lines.push(`  简介：${c.brief}`);
   if (c.opinion) lines.push(`  对主角的看法：${c.opinion}`);
-  const notes = (c.notes || []).slice(-8);
+  const notes = (c.notes || []).slice(focusSet && focusSet.has(c.name) ? -20 : -8);
   if (notes.length) lines.push(`  与主角的往事：${notes.map(n => `[第${n.turn}回合]${n.text}`).join('；')}`);
   const traits = c.traits || [];
   if (traits.length) lines.push(`  主角已了解的词条：${traits.map(t => `【${t.title}】${t.text}`).join('；')}`);
@@ -7309,6 +7310,33 @@ function contextTurns(save) {
   const n = Math.max(S.recentTurns, unsummarized.length);
   return done.slice(-Math.min(n, S.recentTurns + S.summaryInterval * 3));
 }
+/* ---------------- 按人物和类型找回旧事件 ----------------
+   事件记着涉及的人物和类型（可多选）。每回合按“眼下的焦点”（AI 上一回合写的 focus、最近出场的人、
+   玩家这回合行动里点到的名字）给已了结的旧事件打分，挑出相关的发给 AI。 */
+const EVENT_TAGS = ['主线', '支线', '任务', '情感', '友情', '团队', '冲突', '秘密', '成长', '势力'];
+const normTags = v => [...new Set((Array.isArray(v) ? v : str(v).split(/[、,，\s]+/)).map(str).filter(Boolean))].slice(0, 6);
+function sceneFocus(save, action) {
+  const st = save.state, names = new Set(), tags = new Set(normTags(st.focus?.tags));
+  for (const n of st.focus?.characters || []) { const c = findChar(st.characters, n); names.add(c ? c.name : n); }
+  const text = str(action) + '\n' + str(save.log[save.log.length - 1]?.action);
+  for (const c of st.characters) {
+    if ([c.name, ...(c.aliases || [])].some(n => n && text.includes(n))) names.add(c.name);
+    if (c.met !== false && c.lastTurn >= st.turn - 1 && c.lastTurn > 0) names.add(c.name);
+  }
+  return { names, tags };
+}
+function relevantEvents(save, action, pool, limit = 10) {
+  const { names, tags } = sceneFocus(save, action), st = save.state, text = str(action);
+  const scored = pool.map(e => {
+    const chars = (e.characters || []).map(n => findChar(st.characters, n)?.name || n);
+    const cHit = chars.filter(n => names.has(n)).length, tHit = (e.tags || []).filter(t => tags.has(t)).length;
+    const named = text && (text.includes(e.title) || chars.some(n => text.includes(n))) ? 1 : 0;
+    const score = cHit * 3 + tHit * 2 + named * 3 + (e.weight === 'major' ? 1.5 : 0) + e.turn / Math.max(1, st.turn) * 0.5;
+    return { e, score, hit: cHit + tHit + named };
+  }).filter(x => x.hit > 0).sort((a, b) => b.score - a.score);
+  return scored.slice(0, limit).map(x => x.e);
+}
+
 function buildUserPrompt(save, action) {
   const sc = save.script, st = save.state, L = sc.relationLabels;
   const parts = [];
@@ -7321,10 +7349,11 @@ function buildUserPrompt(save, action) {
   parts.push(`【当前状态】第 ${st.turn + 1} 回合｜时间：${yearLabel(sc, st.year)} · ${st.stage || '未标注'}\n主角 ${statLines.join('｜')}`);
   if (st.persona) parts.push(`【主角性格】\n${st.persona}`);
   if (st.background) parts.push(`【主角身世】\n${st.background}`);
-  // 人物
+  // 人物（眼下焦点里的人物，往事多带一些）
   const recentCut = st.turn - 10;
+  const focusNames = sceneFocus(save, action).names;
   const chars = [...st.characters].sort((a, b) => ((a.met === false) - (b.met === false)) || (IMPORTANCE_ORDER[a.importance] - IMPORTANCE_ORDER[b.importance]) || (b.lastTurn - a.lastTurn));
-  if (chars.length) parts.push(`【人物卡】\n${chars.map(c => fmtCharacter(c, L, c.importance === 'minor' && c.lastTurn < recentCut, sc, st.year)).join('\n')}`);
+  if (chars.length) parts.push(`【人物卡】\n${chars.map(c => fmtCharacter(c, L, c.importance === 'minor' && c.lastTurn < recentCut && !focusNames.has(c.name), sc, st.year, focusNames)).join('\n')}`);
   // 背包与目标
   if (st.items.length) parts.push(`【物品】${st.items.map(i => `${i.name}${i.count > 1 ? '×' + i.count : ''}${i.desc ? `（${i.desc}）` : ''}`).join('；')}`);
   const objs = st.objectives.filter(o => o.status === 'active');
@@ -7333,11 +7362,13 @@ function buildUserPrompt(save, action) {
   // 关键事件
   const open = st.events.filter(e => !e.resolved);
   const closed = st.events.filter(e => e.resolved);
-  const closedShown = closed.slice(-12);
-  const closedHidden = closed.length - closedShown.length;
+  const closedShown = closed.slice(-6);
+  const older = closed.slice(0, -6);
+  const recalled = relevantEvents(save, action, older).sort((a, b) => a.turn - b.turn);
+  const closedHidden = older.length - recalled.length;
   if (st.events.length) {
-    const fe = e => `- [第${e.turn}回合]${e.weight === 'major' ? '【重大】' : ''}${e.title}：${e.description || ''}${e.characters?.length ? `（涉及：${e.characters.join('、')}）` : ''}${e.consequence ? `→ ${e.consequence}` : ''}`;
-    parts.push(`【关键事件 · 未了结】\n${open.length ? open.map(fe).join('\n') : '（无）'}${closedShown.length ? `\n【关键事件 · 已了结】${closedHidden > 0 ? `（更早的 ${closedHidden} 条见剧情摘要）` : ''}\n${closedShown.map(fe).join('\n')}` : ''}`);
+    const fe = e => `- [第${e.turn}回合]${e.weight === 'major' ? '【重大】' : ''}${e.title}：${e.description || ''}${e.characters?.length ? `（涉及：${e.characters.join('、')}）` : ''}${e.tags?.length ? `〔${e.tags.join('、')}〕` : ''}${e.consequence ? `→ ${e.consequence}` : ''}`;
+    parts.push(`【关键事件 · 未了结】\n${open.length ? open.map(fe).join('\n') : '（无）'}${closedShown.length ? `\n【关键事件 · 最近了结的】\n${closedShown.map(fe).join('\n')}` : ''}${recalled.length ? `\n【关键事件 · 和眼下相关的旧事】（按眼下的人物和事件类型找出来的）\n${recalled.map(fe).join('\n')}` : ''}${closedHidden > 0 ? `\n（另有 ${closedHidden} 条更早的已了结事件，见剧情摘要）` : ''}`);
   }
   const tl = timelineText(save); if (tl) parts.push(tl);
   if (st.memory) parts.push(`【剧情摘要（更早的剧情）】\n${st.memory}`);
@@ -7607,11 +7638,12 @@ function applyDelta(save, delta, turn) {
     }
   }
   // 事件
+  if (delta.focus && typeof delta.focus === 'object') st.focus = { characters: Array.isArray(delta.focus.characters) ? delta.focus.characters.map(str).filter(Boolean) : [], tags: normTags(delta.focus.tags), turn };
   if (Array.isArray(delta.events)) {
     for (const e of delta.events) {
       if (!e || !str(e.title)) continue;
       if (st.events.find(x => x.title === str(e.title) && !x.resolved)) continue;
-      st.events.push({ id: uid(), turn, title: str(e.title), description: str(e.description), characters: Array.isArray(e.characters) ? e.characters.map(str).filter(Boolean) : [], consequence: str(e.consequence), weight: e.weight === 'major' ? 'major' : 'minor', resolved: false });
+      st.events.push({ id: uid(), turn, title: str(e.title), description: str(e.description), characters: Array.isArray(e.characters) ? e.characters.map(str).filter(Boolean) : [], tags: normTags(e.tags), consequence: str(e.consequence), weight: e.weight === 'major' ? 'major' : 'minor', resolved: false });
       chips.push({ t: `事件：${str(e.title)}`, c: 'ev' });
     }
   }
@@ -9073,7 +9105,7 @@ async function editChar(c) {
     { key: 'appearance', label: '外貌', type: 'textarea', rows: 2 },
     { key: 'brief', label: '简介', type: 'textarea', rows: 2 },
     { key: 'now', label: '现状', type: 'textarea', rows: 2, hint: 'Ta 此刻在哪、在做什么、和谁在一起。AI 会随剧情更新；AI 写错了可以在这里改。' },
-    { key: 'notes', label: '与主角的往事', type: 'textarea', rows: 4, hint: '每行一条，格式“回合|内容”。每回合只把最近 8 条发给 AI。' },
+    { key: 'notes', label: '与主角的往事', type: 'textarea', rows: 4, hint: '每行一条，格式“回合|内容”。每回合把最近 8 条发给 AI；剧情正围绕 Ta 时发最近 20 条。' },
     // 隐藏设定只在玩家自己添加人物时填写；已有人物的隐藏设定由剧情揭示，不在这里显示
     ...(c ? [] : [
       { key: 'motive', label: '立场与动机', type: 'textarea', rows: 2, fold: '隐藏设定（只给 AI 看）' },
@@ -9109,6 +9141,7 @@ function sheetEvents(b) {
       h('div', {}, h('b', {}, e.title), e.weight === 'major' ? h('span', { class: 'pill major' }, '重大') : null, e.resolved ? h('span', { class: 'pill ok' }, '已了结') : null,
         e.description ? h('p', {}, e.description) : null,
         e.characters?.length ? h('p', {}, '涉及：' + e.characters.join('、')) : null,
+        e.tags?.length ? h('p', {}, '类型：' + e.tags.join('、')) : null,
         e.consequence ? h('p', {}, '后续：' + e.consequence) : null)));
   }
   b.append(card);
@@ -9118,13 +9151,15 @@ async function editEvent(e) {
   const st = G.save.state;
   const r = await formModal(e ? '编辑事件' : '添加事件', [
     { key: 'title', label: '标题' }, { key: 'description', label: '经过', type: 'textarea', rows: 3 },
-    { key: 'characters', label: '涉及人物', hint: '用顿号分隔' }, { key: 'consequence', label: '可能的后续', type: 'textarea', rows: 2 },
+    { key: 'characters', label: '涉及人物', hint: '用顿号分隔' },
+    { key: 'tags', label: '类型（可多选）', type: 'multi', options: [...EVENT_TAGS, ...((e?.tags || []).filter(t => !EVENT_TAGS.includes(t)))].map(t => [t, t]), hint: '以后剧情再涉及这些人物或这类事时，这件事会被找出来提醒 AI。' },
+    { key: 'consequence', label: '可能的后续', type: 'textarea', rows: 2 },
     { key: 'weight', label: '分量', type: 'select', options: [['minor', '一般'], ['major', '重大']] },
     { key: 'turn', label: '发生在第几回合', type: 'number' }, { key: 'resolved', label: '已了结', type: 'checkbox' },
   ], e ? { ...e, characters: (e.characters || []).join('、') } : { weight: 'minor', turn: st.turn, resolved: false }, { extra: e ? [{ label: '删除', danger: true, value: 'del' }] : [] });
   if (r === 'del') { st.events.splice(st.events.indexOf(e), 1); return commit('已删除'); }
   if (!r || !str(r.title)) return;
-  const o = { title: str(r.title), description: str(r.description), characters: str(r.characters).split(/[、,，]/).map(str).filter(Boolean), consequence: str(r.consequence), weight: r.weight, turn: Math.max(0, Math.round(r.turn)), resolved: !!r.resolved };
+  const o = { title: str(r.title), description: str(r.description), characters: str(r.characters).split(/[、,，]/).map(str).filter(Boolean), tags: normTags(r.tags), consequence: str(r.consequence), weight: r.weight, turn: Math.max(0, Math.round(r.turn)), resolved: !!r.resolved };
   if (e) Object.assign(e, o); else st.events.push({ id: uid(), ...o });
   st.events.sort((a, c) => a.turn - c.turn);
   commit('已保存');

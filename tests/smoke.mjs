@@ -7,7 +7,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 async function loadPlaywright() {
-  const tries = ['playwright', '/home/claude/.npm-global/lib/node_modules/playwright/index.mjs', '/usr/lib/node_modules/playwright/index.mjs', '/usr/local/lib/node_modules/playwright/index.mjs'];
+  let globalRoot = '';
+  try { globalRoot = (await import('child_process')).execSync('npm root -g', { encoding: 'utf8' }).trim(); } catch {}
+  const tries = ['playwright', globalRoot && globalRoot + '/playwright/index.mjs', '/home/claude/.npm-global/lib/node_modules/playwright/index.mjs', '/usr/lib/node_modules/playwright/index.mjs', '/usr/local/lib/node_modules/playwright/index.mjs'].filter(Boolean);
   for (const t of tries) { try { return await import(t); } catch {} }
   throw new Error('找不到 playwright：npm i -D playwright，或者改 tests/smoke.mjs 里的路径');
 }

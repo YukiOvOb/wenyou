@@ -203,7 +203,7 @@ details.fold summary{cursor:pointer;color:var(--muted);font-size:13.5px}
 .trait-list li{border:1px dashed var(--accent);border-radius:10px;padding:8px 11px;font-size:14px;background:var(--surface)}
 .trait-list li b{color:var(--accent);font-weight:600}
 .trait-list li small{color:var(--faint);margin-left:6px}
-.chip.c-rv{border-style:dashed;border-color:var(--accent);color:var(--accent)}
+.chip.c-rv{border-style:dashed;border-color:var(--accent);color:var(--accent)} /* 划线收藏 */ mark.hl{background:transparent;background:color-mix(in srgb,var(--accent) 13%,transparent);color:inherit;text-decoration:underline 2px var(--accent);text-underline-offset:4px;text-decoration-skip-ink:none;border-radius:2px;cursor:pointer} .mark-btn{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:55;background:var(--accent);color:var(--accent-ink);border:0;border-radius:99px;padding:10px 20px;font-size:15px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.22);-webkit-user-select:none;user-select:none;touch-action:manipulation} .mark-btn[hidden]{display:none} .mark-text{font:15.5px/1.85 var(--serif);white-space:pre-wrap} .mark-filter{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px} .chip-btn{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:99px;padding:3px 11px;font-size:12.5px;min-height:28px} .chip-btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)} .faint{color:var(--faint)} .entry.flash{animation:flash 1.6s ease-out} @keyframes flash{0%{background:color-mix(in srgb,var(--accent) 16%,transparent)}100%{background:transparent}}
 .turn-mark .rw{border:0;background:transparent;color:var(--accent);font-size:12px;padding:2px 4px;cursor:pointer;flex:0 0 auto}
 .turn-mark .rw:disabled{color:var(--faint)}
 .roll{display:flex;flex-direction:column;gap:10px}
@@ -351,8 +351,8 @@ function toast(msg, ms = 2200) {
   const t = $('#toast'); t.textContent = msg; t.classList.add('on');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), ms);
 }
-function download(filename, text) {
-  const blob = new Blob([text], { type: 'application/json' });
+function download(filename, text, type = 'application/json') {
+  const blob = new Blob([text], { type });
   const a = h('a', { href: URL.createObjectURL(blob), download: filename });
   document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
@@ -453,7 +453,7 @@ const PACE_TEXT = {
   normal: '标准节奏：推进一到两个剧情节拍，故事里的时间可以过去十几分钟到一两个小时，场景跟着玩家的行动走。',
   fast: '快节奏：推进一段完整的剧情，过渡一两句带过，可以换场景，故事里的时间可以过去几个小时到几天。遇到重要人物的抉择、冲突爆发或需要玩家表态的时刻，停下来交给玩家。',
 };
-const LENGTH_HOW = { short: '篇幅简短，只写最关键的动作和对白', mid: '篇幅适中', long: '篇幅充裕，可以展开神态、动作、环境，以及对白里的停顿和潜台词' };
+const LENGTH_HOW = { short: '篇幅简短，只写最关键的动作和对白', mid: '篇幅适中', long: '篇幅充裕，神态、动作、环境和对白都可以写得细一些' };
 function paceBlock(save) {
   const L = effLength(save), P = effPace(save);
   return `【本回合的篇幅与节奏】
@@ -483,30 +483,30 @@ function resolveStyle(save) {
   const sel = scriptPrefsOf(save.scriptId, save.script).style;
   if (!sel || !sel.id || sel.id === 'none') return null;
   const live = styleOptions(save.script).find(o => o.id === sel.id);
-  return live || (sel.text ? sel : null);
+  return live || (sel.text && sel.id !== 'script' ? sel : null); // “剧本默认文风”以剧本现在的为准：剧本把文风清空了，就不再用旧的
 }
 
 /* ---------------- 主角性格预设（所有剧本通用） ---------------- */
 const PERSONA_PRESETS = [
-  { id: 'gentle-firm', name: '外柔内刚', text: '说话温和，很少跟人争执。认定一件事以后很固执，别人劝不动。心软，见不得弱者受欺负。' },
-  { id: 'proud', name: '骄傲好胜', text: '好胜心强，最讨厌被人看不起，说话有时带刺。输了会憋着一口气去练。别人对她好，她会一直记着。' },
-  { id: 'calm', name: '冷静多谋', text: '遇事先观察、再开口，习惯把利弊想清楚，给自己留后路。不太把情绪写在脸上，有时显得冷淡。' },
-  { id: 'fiery', name: '热烈直率', text: '想到什么说什么，喜欢和讨厌都摆在脸上。爱管闲事，常惹麻烦，也因此交到真心的朋友。' },
-  { id: 'sharp', name: '散漫毒舌', text: '看起来懒懒散散，说话很损，喜欢用玩笑岔开正经话题。真到要紧的时候很靠得住。' },
-  { id: 'stoic', name: '沉默坚韧', text: '话少，能吃苦，有事习惯自己扛。做事一板一眼，答应别人的事一定办到。' },
-  { id: 'warm', name: '温柔体贴', text: '细心，会照顾人，很容易察觉别人的情绪。其实很有主见，但不想伤害任何人，所以常常委屈自己。' },
-  { id: 'playful', name: '古灵精怪', text: '好奇心重，鬼点子多，喜欢捉弄人、凑热闹。看着没心没肺，其实别人对她的好她都记得。' },
+  { id: 'gentle-firm', name: '外柔内刚', text: '说话温和，很少跟人争执；认定的事很固执，别人劝不动；心软，见不得弱者受欺负。' },
+  { id: 'proud', name: '骄傲好胜', text: '好胜心强，讨厌被人看不起，说话有时带刺；输了会憋着劲去练；记恩。' },
+  { id: 'calm', name: '冷静多谋', text: '遇事先观察再开口，习惯权衡利弊、给自己留后路；情绪很少外露，有时显得冷淡。' },
+  { id: 'fiery', name: '热烈直率', text: '想到什么说什么，喜恶都摆在脸上；爱管闲事，常惹麻烦；朋友多。' },
+  { id: 'sharp', name: '散漫毒舌', text: '做事懒散，说话很损，爱用玩笑岔开正经话题；遇到大事时认真、可靠。' },
+  { id: 'stoic', name: '沉默坚韧', text: '话少，能吃苦，有事自己扛；做事一板一眼，答应的事一定做到。' },
+  { id: 'warm', name: '温柔体贴', text: '细心，会照顾人，能察觉别人的情绪；有主见；怕伤害别人，常常委屈自己。' },
+  { id: 'playful', name: '古灵精怪', text: '好奇心重，鬼点子多，爱捉弄人、爱凑热闹；重感情，记得别人对她的好。' },
 ];
-// 旧版通用性格的文字（写得太有“AI 腔”），旧存档里如果原样用着，就换成新版
+// 旧版通用性格的文字（前两版带着写提示词的人的口吻），旧存档里如果原样用着，就换成新版
 const OLD_PERSONA_TEXTS = {
-  'gentle-firm': '说话温和，不爱与人争口舌，但认定的事九头牛也拉不回；对弱者心软，对原则寸步不让。',
-  'proud': '要强好胜，最受不了被人小看；嘴上不饶人，心里记恩；输了会咬牙练到赢回来。',
-  'calm': '习惯先观察再开口，擅长权衡利弊、给自己留后手；情绪很少写在脸上，偶尔显得不近人情。',
-  'fiery': '爱憎分明，想到就说、说到就做；热心肠，常常管闲事惹上麻烦，也因此交到真朋友。',
-  'sharp': '看上去懒散随性，嘴巴很毒，习惯用玩笑挡开真心话；关键时刻比谁都靠得住。',
-  'stoic': '话少、能吃苦，把情绪压在心里，只在极少数人面前松动；做事一板一眼，答应的事一定做到。',
-  'warm': '细心，会照顾人，善于察觉别人的情绪；看似柔软，其实很有主见，不愿伤害任何人，也因此常常为难自己。',
-  'playful': '好奇心旺盛，鬼点子多，爱捉弄人也爱热闹；看起来没心没肺，其实把每个人对她的好都记在心里。',
+  'gentle-firm': ['说话温和，不爱与人争口舌，但认定的事九头牛也拉不回；对弱者心软，对原则寸步不让。', '说话温和，很少跟人争执。认定一件事以后很固执，别人劝不动。心软，见不得弱者受欺负。'],
+  'proud': ['要强好胜，最受不了被人小看；嘴上不饶人，心里记恩；输了会咬牙练到赢回来。', '好胜心强，最讨厌被人看不起，说话有时带刺。输了会憋着一口气去练。别人对她好，她会一直记着。'],
+  'calm': ['习惯先观察再开口，擅长权衡利弊、给自己留后手；情绪很少写在脸上，偶尔显得不近人情。', '遇事先观察、再开口，习惯把利弊想清楚，给自己留后路。不太把情绪写在脸上，有时显得冷淡。'],
+  'fiery': ['爱憎分明，想到就说、说到就做；热心肠，常常管闲事惹上麻烦，也因此交到真朋友。', '想到什么说什么，喜欢和讨厌都摆在脸上。爱管闲事，常惹麻烦，也因此交到真心的朋友。'],
+  'sharp': ['看上去懒散随性，嘴巴很毒，习惯用玩笑挡开真心话；关键时刻比谁都靠得住。', '看起来懒懒散散，说话很损，喜欢用玩笑岔开正经话题。真到要紧的时候很靠得住。'],
+  'stoic': ['话少、能吃苦，把情绪压在心里，只在极少数人面前松动；做事一板一眼，答应的事一定做到。', '话少，能吃苦，有事习惯自己扛。做事一板一眼，答应别人的事一定办到。'],
+  'warm': ['细心，会照顾人，善于察觉别人的情绪；看似柔软，其实很有主见，不愿伤害任何人，也因此常常为难自己。', '细心，会照顾人，很容易察觉别人的情绪。其实很有主见，但不想伤害任何人，所以常常委屈自己。'],
+  'playful': ['好奇心旺盛，鬼点子多，爱捉弄人也爱热闹；看起来没心没肺，其实把每个人对她的好都记在心里。', '好奇心重，鬼点子多，喜欢捉弄人、凑热闹。看着没心没肺，其实别人对她的好她都记得。'],
 };
 function personaOptions(script) {
   const o = [];
@@ -647,9 +647,9 @@ function scriptPrefsControls(script, prefs, onChange, prefix, opts = {}) {
     h('button', { class: 'btn sm', onclick: async () => { const r = await profileEditor(null); if (r && r !== 'deleted') { prefs.profileId = r.id; fire(); } opts.rerender && opts.rerender(); } }, '新建方案')));
   // 文风
   const styles = styleOptions(script);
-  const curId = prefs.style?.id || 'none';
+  const curId = prefs.style?.id === 'script' && !styles.find(o => o.id === 'script') ? 'none' : prefs.style?.id || 'none';
   const sOpts = styles.map(o => [o.id, o.name]);
-  if (prefs.style && !styles.find(o => o.id === prefs.style.id)) sOpts.unshift([prefs.style.id, prefs.style.name + '（已删除的文风副本）']);
+  if (prefs.style && prefs.style.id !== 'script' && !styles.find(o => o.id === prefs.style.id)) sOpts.unshift([prefs.style.id, prefs.style.name + '（已删除的文风副本）']);
   const stySel = selectEl(prefix + '-style', sOpts, curId);
   const styHint = h('div', { class: 'hint' });
   const updSty = () => { const o = styles.find(x => x.id === stySel.value) || (prefs.style?.id === stySel.value ? prefs.style : null); styHint.textContent = o?.text ? o.text.slice(0, 90) + (o.text.length > 90 ? '…' : '') : ''; };
@@ -4129,7 +4129,7 @@ const SCRIPT_TEMPLATE = {
   intro: '书架上显示的简介，写给玩家看。',
   world: '剧本正文：世界观、时代背景、主角身份、开端、主要势力、人物关系、暗线与真相（可注明“仅主持人知晓”）。这部分会完整发给 AI。',
   rules: '剧本专属规则，例如：这个世界怎么运转、人物之间固定的关系、叙事视角。',
-  style: '剧本默认文风（可留空）。开局时玩家可以换成其他文风。',
+  style: '剧本默认文风（可留空，留空时 AI 用它自己的文风）。开局时玩家可以换成其他文风。',
   relationLabels: { friendliness: '好感', affection: '心动' },
   stats: [
     { key: 'name', label: '姓名', type: 'text', ask: true, initial: '', placeholder: '主角的名字' },
@@ -4137,7 +4137,7 @@ const SCRIPT_TEMPLATE = {
   ],
   persona: '主角的默认人设，开局时可以改。',
   characters: [
-    { name: '示例人物', identity: '身份', appearance: '外貌', personality: '性格', relation: '与主角的关系', brief: '一句话简介', opinion: '对主角的初始看法', friendliness: 50, affection: 0, importance: 'major', motive: '立场与动机（只给 AI 看）', backstory: '过往经历，性格的来源（只给 AI 看）', secret: '秘密（只给 AI 看）' },
+    { name: '示例人物', identity: '身份', appearance: '外貌', personality: '性格', relation: '与主角的关系', brief: '一句话简介', opinion: '对主角的初始看法', now: '现状：故事开始时在哪、在做什么、和谁在一起', friendliness: 50, affection: 0, importance: 'major', motive: '立场与动机（只给 AI 看）', backstory: '过往经历，性格的来源（只给 AI 看）', secret: '秘密（只给 AI 看）' },
   ],
   objectives: [{ title: '初始目标', description: '说明', status: 'active', progress: 0 }],
   items: [],
@@ -4172,6 +4172,8 @@ function normalizeScript(raw) {
   } else delete s.creation;
   s.milestones = Array.isArray(s.milestones) ? s.milestones.filter(m => m && str(m.id) && str(m.title)) : [];
   s.openingSeeds = Array.isArray(s.openingSeeds) ? s.openingSeeds.map(str).filter(Boolean) : [];
+  s.openingRandom = s.openingRandom !== false; // false：剧本的开场是固定的一幕，不再随机抽开场情境
+  s.traitSeeds = Array.isArray(s.traitSeeds) ? s.traitSeeds.map(str).filter(Boolean) : []; // 剧本自己的随机潜质，和引擎的通用潜质一起抽
   s.charStats = (Array.isArray(s.charStats) ? s.charStats : []).filter(x => x && str(x.key) && !['name', 'gender', 'age', 'born'].includes(str(x.key)))
     .map(x => ({ key: str(x.key), label: str(x.label) || str(x.key), type: x.type === 'number' ? 'number' : 'text', ...(x.min !== undefined ? { min: num(x.min) } : {}), ...(x.max !== undefined ? { max: num(x.max) } : {}), ...(str(x.hint) ? { hint: str(x.hint) } : {}) }));
   s.calendar = normCalendar(s.calendar);
@@ -4266,13 +4268,46 @@ function syncAges(st, script) {
   st.stats.age = def.type === 'number' ? a : `${a}岁`;
 }
 
+/* ---------------- 本局随机潜质 ----------------
+   开新档时，给每个主要人物抽 2 个、次要人物抽 1 个潜质。潜质只给 AI 看：AI 按人物的设定定下具体内容，
+   定下来就一直照着演；剧情里被主角发现时，记成这个人物的词条。每一局抽到的都不一样。 */
+const TRAIT_SEEDS = [
+  '左撇子', '失眠', '嗜甜', '爱干净到挑剔', '收集小玩意', '路痴', '酒量极好', '一沾酒就醉', '爱养小动物', '字写得难看', '做饭好吃', '爱哼小调', '起床气重', '怕冷', '晕船', '爱看话本或闲书', '爱赌', '花钱大手大脚', '极其节俭',
+  '怕黑', '怕水', '怕打雷', '怕虫子', '怕高', '怕狗',
+  '过目不忘', '会一门乐器', '懂医术', '擅长画画', '擅长易容', '会驯养动物', '算账极快', '会做精巧的小物件', '懂毒', '会几门方言', '擅长模仿别人说话',
+  '有过一段无疾而终的感情', '曾有婚约', '有个失散的亲人', '欠某人一条命', '年少时犯过一个大错', '曾被最信任的人背叛', '在底层讨过生活', '死里逃生过', '放弃过一个很重要的机会', '家里出过变故', '救过一个不该救的人', '改过名字',
+  '想离开现在的地方', '害怕被人抛下', '渴望被某个人认可', '有一个还没兑现的约定', '厌倦了现在的身份', '一直在找一个人', '想做一件和身份不相称的事', '有个藏了很多年的心愿',
+  '暗中照顾着某个人', '和某人有私下的约定', '偷偷仰慕某个人', '和某个人有旧怨', '替某个人保守着秘密', '欠着一大笔钱', '暗中给某个势力传消息',
+  '嫉妒心重', '极度要强', '疑心重', '控制欲强', '心软到误事', '爱撒小谎', '爱面子', '容易冲动', '记仇', '护短', '好奇心重到惹祸', '胆子比看上去小', '对某件事有近乎偏执的坚持',
+];
+const SEEDS_BY_IMPORTANCE = { major: 2, supporting: 1, minor: 0 };
+function normSeeds(v) {
+  return (Array.isArray(v) ? v : []).map(x => typeof x === 'string' ? { seed: str(x), text: '' } : x && { seed: str(x.seed), text: str(x.text), ...(x.revealed ? { revealed: true } : {}) }).filter(x => x && x.seed);
+}
+/* 给一批人物发潜质：先洗牌，一局之内尽量不重复 */
+function dealSeeds(chars, script, taken = []) {
+  const used = new Set(taken);
+  const pool = [...new Set([...(script?.traitSeeds || []), ...TRAIT_SEEDS])];
+  const deck = pool.filter(x => !used.has(x)).sort(() => Math.random() - 0.5);
+  const rest = pool.filter(x => used.has(x)).sort(() => Math.random() - 0.5);
+  const draw = () => deck.length ? deck.pop() : rest.pop();
+  for (const c of chars) {
+    if (Array.isArray(c.seeds) && c.seeds.length) continue;
+    const n = SEEDS_BY_IMPORTANCE[c.importance] ?? 1;
+    c.seeds = [];
+    for (let i = 0; i < n; i++) { const x = draw(); if (x && !c.seeds.find(y => y.seed === x)) c.seeds.push({ seed: x, text: '' }); }
+  }
+}
+const usedSeeds = st => st.characters.flatMap(c => (c.seeds || []).map(x => x.seed));
+
 /* ---------------- 存档与状态 ---------------- */
 function makeCharacter(c, turn = 0, refYear) {
   return {
     id: uid(), name: str(c.name), aliases: Array.isArray(c.aliases) ? c.aliases : [],
     avatar: str(c.avatar), identity: str(c.identity), appearance: str(c.appearance), personality: str(c.personality),
     relation: str(c.relation), brief: str(c.brief), opinion: str(c.opinion),
-    motive: str(c.motive), backstory: str(c.backstory), secret: str(c.secret), address: str(c.address),
+    motive: str(c.motive), backstory: str(c.backstory), secret: str(c.secret), address: str(c.address), now: str(c.now),
+    seeds: normSeeds(c.seeds),
     gender: str(c.gender), born: bornFrom(c, refYear), stats: c.stats && typeof c.stats === 'object' && !Array.isArray(c.stats) ? clone(c.stats) : {},
     traits: Array.isArray(c.traits) ? c.traits.filter(t => t && str(t.title)) : [],
     status: str(c.status) || '在世', importance: ['major', 'supporting', 'minor'].includes(c.importance) ? c.importance : 'supporting',
@@ -4302,6 +4337,7 @@ function newSave(script, statValues, persona, saveName, opts = {}) {
   const year = calendarOf(script).start; // 剧本里人物的年龄都是故事开始这一年的
   const characters = chars.map(c => makeCharacter(c, 0, year));
   for (const [n, ov] of Object.entries(overrides)) { const c = characters.find(x => x.name === n); if (c) Object.assign(c, ov); }
+  dealSeeds(characters, script);
   const timeline = {};
   for (const m of script.milestones || []) if (m.initial) timeline[m.id] = { status: m.initial, outcome: '', turn: 0 };
   const heroAge = script.stats.some(x => x.key === 'age') ? ageNum(stats.age) : null;
@@ -4336,8 +4372,12 @@ function migrateSave(save) {
     }
     for (const k of ['length', 'pace', 'profileId', 'profileSnapshot', 'style', 'useGlobalPrefs']) delete st[k];
   }
-  for (const [id, old] of Object.entries(OLD_PERSONA_TEXTS)) if (str(st.persona) === old) { st.persona = PERSONA_PRESETS.find(p => p.id === id).text; G.migrated = true; }
+  for (const [id, olds] of Object.entries(OLD_PERSONA_TEXTS)) if (olds.includes(str(st.persona))) { st.persona = PERSONA_PRESETS.find(p => p.id === id).text; G.migrated = true; }
   ensureGenderStat(save.script);
+  // 旧存档的人物还没有本局潜质：现在抽；回退快照里的同一个人用同一组
+  const fresh = (st.characters || []).filter(c => !Array.isArray(c.seeds));
+  if (fresh.length) { dealSeeds(fresh, save.script, usedSeeds(st)); G.migrated = true; }
+  for (const sn of save.snapshots || []) for (const c of sn.state?.characters || []) if (!Array.isArray(c.seeds)) { const cur = findChar(st.characters, c.name); c.seeds = cur ? clone(cur.seeds) : []; }
   // 当前状态和每一个回退快照都补齐（快照恢复出来的状态也要完整）
   for (const x of [st, ...(save.snapshots || []).map(sn => sn.state).filter(Boolean)]) {
     if (!str(x.stats?.gender)) G.migrated = true;
@@ -4350,6 +4390,7 @@ function normalizeState(st, script) {
   st.stats = st.stats || {}; st.characters = st.characters || [];
   for (const c of st.characters) {
     c.traits = c.traits || []; c.motive = c.motive || ''; c.backstory = c.backstory || ''; c.secret = c.secret || ''; if (c.met === undefined) c.met = true;
+    c.now = str(c.now); c.seeds = normSeeds(c.seeds);
     c.gender = str(c.gender); if (c.born === undefined) c.born = null; if (!c.stats || typeof c.stats !== 'object') c.stats = {};
   }
   st.timeline = st.timeline || {}; st.butterflies = st.butterflies || []; st.background = st.background || '';
@@ -4417,16 +4458,18 @@ function buildSystemPrompt(save) {
 2. 【剧本设定】【人物卡】【关键事件】【剧情摘要】里已经确立的事实，前后保持一致。
 3. 人物按自己的性格、立场、动机和经历行事，对主角的态度随着相处慢慢变化。人物之间也有各自的关系和来往。
 4. 篇幅和节奏按每回合末尾【本回合的篇幅与节奏】来。每回合停在一个需要玩家作出选择或回应的时刻。
-5. 用具体的动作、对白和环境细节推进剧情。正文是纯文本的小说段落，对白用中文引号“”。
+5. 正文是纯文本的小说段落，对白用中文引号“”。
 6. 人物之间的称呼按双方的身份和关系来；人物卡里写了“称呼”的，照着用。
 7. 人物卡里标注“主角尚不知道”的内容（立场与动机、过往经历、秘密）是人物言行的依据，让玩家在剧情里一点点发现。
-8. 主角在本回合真正了解到某个人物的一段过往、真实动机或秘密时（亲眼所见、对方亲口讲述、可靠的证据或合理的推理），在这个人物的 "reveal" 里记一条词条。词条内容和这个人物的隐藏设定一致；隐藏设定为空时可以合理创造，并同时用 "inner" 补全。揭示稀少而有分量，通常很多回合才有一次，每条词条只记一次。
-9. 人物卡里标注“主角尚未结识”的人物，主角还不认识（最多听说过名字）。他们照常过自己的日子、办自己的事；和主角相遇时，按人物卡来演，并在 characters 里更新这个人。
-10. 每个人物都有“基本信息”（性别、年龄${cs.length ? '、' + cs.map(d => d.label).join('、') : ''}），这是这个人此刻的真实情况，写到时照着来。人物有了变化，在 characters 的 stats 里写新的值；基本信息里还空着的，这个人出场时补上。
-11. 【当前状态】里写着现在是哪一年。剧情过了一年或更久时，在 year 里写新的年份；每个人的年龄由程序按出生年份计算。
-${hasTimeline ? `12. 本剧本有一条主线时间线（见【主线时间线】）。故事按节点的顺序一个一个推进，节点之间可以有原创剧情。主角不在场时，节点照样发生，主角可以通过传闻、公文或别人转述得知。每个节点都会以某种形式到来，参与者、过程和结果可以因为主角的行动而改变。剧情进入某个节点时，在 milestones 里标为 active；节点结束时标为 done，并在 outcome 里写明这一档实际发生了什么。
-13. 主角的行动让世界和原著不一样了（某人的命运、某段关系、某个事件的时间或结果变了）时，在 butterflies 里记下：原本会怎样、现在变成了怎样、可能带来什么连锁影响。每条蝴蝶效应都从主角的行动出发，有前因后果；记下之后，后面的剧情接着它往下写。
-14. 时间线和蝴蝶效应是给你的备忘。正文只写故事里的人经历的事，后面会发生什么，让玩家在剧情里自己经历。
+8. 主角在本回合真正了解到某个人物的一段过往、真实动机、秘密或本局潜质时（亲眼所见、对方亲口讲述、可靠的证据或合理的推理），在这个人物的 "reveal" 里记一条词条。词条内容和这个人物的隐藏设定一致；隐藏设定为空时可以合理创造，并同时用 "inner" 补全。揭示稀少而有分量，通常很多回合才有一次，每条词条只记一次。
+9. 人物卡里的“本局潜质”是这一局随机分给这个人物的特点，每一局都不一样。它具体是什么样，由你按这个人物的性格、经历和处境来定，和他已有的设定相容；第一次在剧情里用到时，在这个人物的 "seeds" 里写下具体内容，之后一直照着它来演。它被主角发现时，记成一条词条，并在词条里写上对应的 "seed"。
+10. 人物卡里的“现状”是这个人此刻在哪、在做什么、和谁在一起、处在自己经历的哪一步。写到这个人时，从现状出发。现状变了（换了地方、身份或处境，主线往前走了，或者主角的行动改变了他的处境），在 characters 的 "now" 里写新的现状，主角不在场的人也一样。
+11. 人物卡里标注“主角尚未结识”的人物，主角还不认识（最多听说过名字）。他们照常过自己的日子、办自己的事，现状变了照样更新 "now"；和主角相遇、有了来往时，按人物卡来演，并在 characters 里写上这个人和主角的关系、看法。
+12. 每个人物都有“基本信息”（性别、年龄${cs.length ? '、' + cs.map(d => d.label).join('、') : ''}），这是这个人此刻的真实情况，写到时照着来。人物有了变化，在 characters 的 stats 里写新的值；基本信息里还空着的，这个人出场时补上。
+13. 【当前状态】里写着现在是哪一年。剧情过了一年或更久时，在 year 里写新的年份；每个人的年龄由程序按出生年份计算。
+${hasTimeline ? `14. 本剧本有一条主线时间线（见【主线时间线】）。故事按节点的顺序一个一个推进，节点之间可以有原创剧情。主角不在场时，节点照样发生，主角可以通过传闻、公文或别人转述得知。每个节点都会以某种形式到来，参与者、过程和结果可以因为主角的行动而改变。剧情进入某个节点时，在 milestones 里标为 active；节点结束时标为 done，并在 outcome 里写明这一档实际发生了什么。节点推进时，参与其中的人物的现状跟着更新。
+15. 主角的行动让世界和原著不一样了（某人的命运、某段关系、某个事件的时间或结果变了）时，在 butterflies 里记下：原本会怎样、现在变成了怎样、可能带来什么连锁影响，并更新受影响的人物的现状。每条蝴蝶效应都从主角的行动出发，有前因后果；记下之后，后面的剧情接着它往下写。
+16. 时间线和蝴蝶效应是给你的备忘。正文只写故事里的人经历的事，后面会发生什么，让玩家在剧情里自己经历。
 ` : ''}${prefs ? `\n【玩家的基础偏好】（适用于所有剧本；和剧本明确的设定冲突时，以剧本为准）\n${prefs}\n` : ''}${prof ? `\n【本局的故事口味：${prof.name}】（决定剧情的重心和走向；和剧本设定冲突时，以剧本为准）\n${profileText(prof)}\n` : ''}
 【剧本：${sc.title}】
 ${sc.world}
@@ -4440,8 +4483,8 @@ ${sc.rules ? `\n【剧本规则】\n${sc.rules}\n` : ''}${style ? `\n【文风�
   "stage": "新的阶段标签（季节或时段 · 地点），有变化才写",
   "stats": {"属性key": 数值属性写变化量（如 5 或 -3），文本属性写新的完整文本},
   "characters": [
-    {"name": "已有人物名", ${cs.length ? '"stats": {"基本信息key": "新的值"}, ' : ''}"friendliness": 变化量, "affection": 变化量, "opinion": "此刻对主角的看法（一句话）", "relation": "新的关系标签", "status": "在世/离开/受伤/死亡等", "note": "本回合此人与主角之间值得长期记住的事（一句话）", "inner": {"motive": "立场与动机", "backstory": "过往经历（性格的来源）", "secret": "秘密"}, "reveal": [{"title": "词条名，8字以内", "text": "主角了解到的内容，60字以内"}]},
-    {"name": "首次登场的人物", "new": true, "gender": "性别", "age": 年龄（数字）, ${cs.length ? '"stats": {"基本信息key": "值"}, ' : ''}"identity": "身份", "appearance": "外貌", "personality": "性格", "relation": "与主角的关系", "brief": "一句话简介", "opinion": "对主角的看法", "friendliness": 0到100的初始值, "affection": 0到100的初始值, "importance": "major/supporting/minor", "motive": "立场与动机（主角尚不知道）", "backstory": "过往经历，性格的来源（主角尚不知道）", "secret": "秘密（可省略）"}
+    {"name": "已有人物名", ${cs.length ? '"stats": {"基本信息key": "新的值"}, ' : ''}"friendliness": 变化量, "affection": 变化量, "opinion": "此刻对主角的看法（一句话）", "relation": "新的关系标签", "status": "在世/离开/受伤/死亡等", "note": "本回合此人与主角之间值得长期记住的事（一句话）", "now": "新的现状（变了才写）", "inner": {"motive": "立场与动机", "backstory": "过往经历（性格的来源）", "secret": "秘密"}, "seeds": [{"seed": "本局潜质", "text": "定下的具体内容"}], "reveal": [{"title": "词条名，8字以内", "text": "主角了解到的内容，60字以内", "seed": "对应的本局潜质（有的话）"}]},
+    {"name": "首次登场的人物", "new": true, "gender": "性别", "age": 年龄（数字）, ${cs.length ? '"stats": {"基本信息key": "值"}, ' : ''}"identity": "身份", "appearance": "外貌", "personality": "性格", "relation": "与主角的关系", "brief": "一句话简介", "now": "现状", "opinion": "对主角的看法", "friendliness": 0到100的初始值, "affection": 0到100的初始值, "importance": "major/supporting/minor", "motive": "立场与动机（主角尚不知道）", "backstory": "过往经历，性格的来源（主角尚不知道）", "secret": "秘密（可省略）"}
   ],
   "events": [{"title": "15字以内", "description": "60字以内", "characters": ["相关人物"], "consequence": "可能带来的后续影响", "weight": "major或minor"}],
   "resolved": ["本回合已经了结的关键事件标题"],
@@ -4450,27 +4493,34 @@ ${sc.rules ? `\n【剧本规则】\n${sc.rules}\n` : ''}${style ? `\n【文风�
   "milestones": [{"id": "节点 id", "status": "active 或 done", "outcome": "本档实际发生的情况（done 时必填，写清与原著的不同）"}],
   "butterflies": [{"text": "因为……，现在……", "canon": "原著中本应……", "ripple": "可能的连锁影响"}]` : ''}
 }
-说明：主角可用的属性 key 有 ${statKeys}。${cs.length ? `人物的基本信息 key 有 ${cs.map(d => `${d.key}（${d.label}${d.type === 'number' ? '，数值' : ''}）`).join('、')}，写新的值。` : ''}${L.friendliness}（friendliness）表示信任与亲近，${L.affection}（affection）表示心动与恋慕，两者互相独立，范围都是 0～100，每回合变化一般在 ±10 以内。会影响后续剧情的转折才记为 events，通常每回合 0～2 条。有名有姓、可能再次出现的人物首次登场时，用 "new": true 建卡，并为主要和次要人物写好 motive 和 backstory。"inner" 用来补写这个人物还空着的隐藏设定。choices 给出主角接下来可以做的几种行动，由玩家来选。`;
+说明：主角可用的属性 key 有 ${statKeys}。${cs.length ? `人物的基本信息 key 有 ${cs.map(d => `${d.key}（${d.label}${d.type === 'number' ? '，数值' : ''}）`).join('、')}，写新的值。` : ''}${L.friendliness}（friendliness）表示信任与亲近，${L.affection}（affection）表示心动与恋慕，两者互相独立，范围都是 0～100，每回合变化一般在 ±10 以内。会影响后续剧情的转折才记为 events，通常每回合 0～2 条。有名有姓、可能再次出现的人物首次登场时，用 "new": true 建卡，并为主要和次要人物写好 motive 和 backstory。"inner" 用来补写这个人物还空着的隐藏设定。只更新现状、基本信息或状态的人物，主角仍然不认识他。choices 给出主角接下来可以做的几种行动，由玩家来选。`;
 }
 
 const trimEnd = t => str(t).replace(/[。；;，,\s]+$/, ''); // 拼接多段文字时去掉末尾标点，免得出现“。；”
+/* 本局随机潜质（还没被主角发现的）：定了具体内容的写内容，没定的等 AI 来定 */
+const openSeeds = c => (c.seeds || []).filter(x => !x.revealed);
+const seedsText = c => openSeeds(c).map(x => x.text ? `${x.seed}：${trimEnd(x.text)}` : `${x.seed}（具体内容还没定）`).join('；');
 function fmtCharacter(c, L, brief, sc, year) {
   const basic = sc ? `  基本信息：${charBasicText(sc, c, year, brief)}` : '';
+  const now = c.now ? `  现状：${c.now}` : '';
   if (c.met === false) {
     const lines = [`◆ ${c.name}｜${c.identity || '身份不明'}｜〔主角尚未结识〕`];
     if (basic) lines.push(basic);
+    if (now) lines.push(now);
     if (c.address) lines.push(`  称呼：${c.address}`);
     if (c.personality) lines.push(`  性格：${c.personality}`);
     if (c.brief) lines.push(`  简介：${c.brief}`);
     if (c.appearance) lines.push(`  外貌：${c.appearance}`);
     const hid = [c.motive && `立场与动机：${trimEnd(c.motive)}`, c.backstory && `过往：${trimEnd(c.backstory)}`, c.secret && `秘密：${trimEnd(c.secret)}`].filter(Boolean);
     if (hid.length) lines.push(`  〔隐藏设定〕${hid.join('；')}`);
+    if (openSeeds(c).length) lines.push(`  〔本局潜质〕${seedsText(c)}`);
     return lines.join('\n');
   }
   const head = `◆ ${c.name}${c.aliases?.length ? `（又名${c.aliases.join('、')}）` : ''}｜${c.identity || '身份不明'}｜与主角：${c.relation || '—'}｜${L.friendliness} ${Math.round(c.friendliness)} · ${L.affection} ${Math.round(c.affection)}｜${c.status || '在世'}`;
-  if (brief) return head + (basic ? '\n' + basic : '') + (c.brief ? `\n  ${c.brief}` : '');
+  if (brief) return head + (basic ? '\n' + basic : '') + (now ? '\n' + now : '') + (c.brief ? `\n  ${c.brief}` : '');
   const lines = [head];
   if (basic) lines.push(basic);
+  if (now) lines.push(now);
   if (c.address) lines.push(`  称呼：${c.address}`);
   if (c.personality) lines.push(`  性格：${c.personality}`);
   if (c.appearance) lines.push(`  外貌：${c.appearance}`);
@@ -4486,6 +4536,7 @@ function fmtCharacter(c, L, brief, sc, year) {
   if (c.secret) hid.push(`秘密：${trimEnd(c.secret)}`);
   if (hid.length) lines.push(`  〔隐藏设定，主角尚不知道${traits.length ? '（已揭示的部分见上方词条）' : ''}〕${hid.join('；')}`);
   else lines.push('  〔隐藏设定尚未确立，此人有重要戏份时用 inner 补全〕');
+  if (openSeeds(c).length) lines.push(`  〔本局潜质，主角尚不知道〕${seedsText(c)}`);
   return lines.join('\n');
 }
 
@@ -4707,6 +4758,19 @@ function findChar(list, name) {
   const n = str(name); if (!n) return null;
   return list.find(c => c.name === n) || list.find(c => (c.aliases || []).includes(n)) || null;
 }
+/* AI 用的潜质名可能和原文差几个字：先找完全一样的，再找互相包含的 */
+function findSeed(c, name) {
+  const n = str(name); if (!n) return null;
+  const list = c.seeds || [];
+  return list.find(x => x.seed === n) || list.find(x => x.seed.includes(n) || n.includes(x.seed)) || null;
+}
+/* 潜质第一次在剧情里用到时，AI 定下具体内容；定了就不再改 */
+function applySeeds(c, seeds) {
+  for (const sd of Array.isArray(seeds) ? seeds : []) {
+    const x = findSeed(c, sd && sd.seed), t = str(sd && sd.text);
+    if (x && t && !x.text) x.text = t;
+  }
+}
 function applyReveal(c, reveal, turn, chips) {
   if (!reveal) return;
   const list = Array.isArray(reveal) ? reveal : [reveal];
@@ -4714,11 +4778,16 @@ function applyReveal(c, reveal, turn, chips) {
   for (const r of list) {
     const title = str(typeof r === 'string' ? r : r && r.title).slice(0, 16), text = str(r && r.text);
     if (!title) continue;
+    const sd = r && typeof r === 'object' ? findSeed(c, r.seed) : null;
+    if (sd) { if (!sd.text) sd.text = text; sd.revealed = true; }
     if (c.traits.find(t => t.title === title)) continue;
-    c.traits.push({ id: uid(), title, text, turn });
+    c.traits.push({ id: uid(), title, text, turn, ...(sd ? { seed: sd.seed } : {}) });
     chips.push({ t: `发现 ${c.name}：${title}`, c: 'rv' });
   }
 }
+/* 这些字段说明主角和这个人有了来往；只更新现状、基本信息、状态的，不算结识 */
+const MEET_KEYS = ['friendliness', 'affection', 'opinion', 'relation', 'note', 'reveal'];
+const meetsPlayer = cd => cd.met === true || MEET_KEYS.some(k => cd[k] !== undefined && cd[k] !== null && str(cd[k]) !== '');
 function applyDelta(save, delta, turn) {
   const sc = save.script, st = save.state, L = sc.relationLabels, chips = [];
   if (!delta || typeof delta !== 'object') return chips;
@@ -4760,14 +4829,15 @@ function applyDelta(save, delta, turn) {
       if (!c) {
         if (!cd.new && !cd.identity && !cd.brief && !cd.personality) continue;
         const inner = cd.inner && typeof cd.inner === 'object' ? cd.inner : {};
-        c = makeCharacter({ ...cd, stats: pickCharStats(sc, cd.stats), born: undefined, motive: cd.motive || inner.motive, backstory: cd.backstory || inner.backstory, secret: cd.secret || inner.secret, traits: [], friendliness: cd.friendliness ?? 50, affection: cd.affection ?? 0 }, turn, st.year);
+        c = makeCharacter({ ...cd, stats: pickCharStats(sc, cd.stats), born: undefined, motive: cd.motive || inner.motive, backstory: cd.backstory || inner.backstory, secret: cd.secret || inner.secret, traits: [], seeds: [], friendliness: cd.friendliness ?? 50, affection: cd.affection ?? 0 }, turn, st.year);
+        dealSeeds([c], sc, usedSeeds(st));
         if (cd.note) c.notes.push({ turn, text: str(cd.note) });
         applyReveal(c, cd.reveal, turn, chips);
         st.characters.push(c);
         chips.push({ t: `结识 ${c.name}`, c: 'ch' });
         continue;
       }
-      if (c.met === false) { c.met = true; chips.push({ t: `结识 ${c.name}`, c: 'ch' }); }
+      if (c.met === false && meetsPlayer(cd)) { c.met = true; chips.push({ t: `结识 ${c.name}`, c: 'ch' }); }
       if (cd.new) { // 已存在却标记为新：当作补充信息
         for (const f of ['identity', 'appearance', 'personality', 'brief']) if (!c[f] && str(cd[f])) c[f] = str(cd[f]);
       }
@@ -4782,10 +4852,15 @@ function applyDelta(save, delta, turn) {
       if (str(cd.gender) && !str(c.gender)) c.gender = str(cd.gender);
       if (cd.age !== undefined && (c.born === null || c.born === undefined)) { const a = ageNum(cd.age); if (a !== null) c.born = st.year - a; }
       mergeCharStats(sc, c, cd.stats, chips);
-      if (['major', 'supporting', 'minor'].includes(cd.importance)) c.importance = cd.importance;
+      if (['major', 'supporting', 'minor'].includes(cd.importance)) {
+        c.importance = cd.importance;
+        if (!(c.seeds || []).length) dealSeeds([c], sc, usedSeeds(st)); // 路人升成重要人物，补上潜质
+      }
+      if (str(cd.now)) c.now = str(cd.now);
       if (str(cd.note)) c.notes.push({ turn, text: str(cd.note) });
       const inner = cd.inner && typeof cd.inner === 'object' ? cd.inner : {};
       for (const f of ['motive', 'backstory', 'secret']) { const v = str(inner[f] || (cd.new ? cd[f] : '')); if (v && !c[f]) c[f] = v; }
+      applySeeds(c, cd.seeds || inner.seeds);
       applyReveal(c, cd.reveal, turn, chips);
       c.lastTurn = turn;
     }
@@ -4981,7 +5056,7 @@ ${entries.map(e => `〔第${e.turn}回合〕${e.action ? '玩家行动：' + e.a
 请把新剧情并入旧摘要，写一份更新后的完整剧情摘要：
 1. 按时间顺序，用年份和“第X回合前后”标注大致位置；越早的剧情写得越概括，最近的写得具体一些。
 2. 保留已经发生的重要事实和转折、人物之间的承诺、约定、欠下的人情、谎言和秘密（写明谁知道、谁不知道）、埋下的伏笔、还没解决的问题、主角做过的关键选择。
-3. 只记事实，用平实的叙述。
+3. 只记事实。
 4. 最后单独一段写“当前局势”：主角此刻在哪、和谁在一起、正在做什么、面临什么。
 5. 总长度在 ${S.memoryMaxChars} 字以内，直接从摘要正文写起。` },
   ];
@@ -5011,8 +5086,8 @@ async function startOpening(save) {
   G.busy = true; G.error = null; G.stream = { action: '', text: '', thinking: false, rc: 0, t0: Date.now() }; renderLog(); setComposerBusy(true);
   G.abort = new AbortController();
   if (!(save.snapshots || []).find(x => x.turn === 0)) pushSnapshot(save, 0); // 留一份开场前的状态，方便重新生成开场
-  const seed = openingSeed(save);
-  const guide = `\n这次开场的情境（随机抽到的，细节按主角的身份和所在地来定）：时间：${seed.time}；情境：${seed.situation}；基调：${seed.tone}。${save.state.openingGuide ? `\n${save.state.openingGuide}` : ''}`;
+  const seed = sc.openingRandom === false ? null : openingSeed(save);
+  const guide = `${seed ? `\n这次开场的情境（随机抽到的，细节按主角的身份和所在地来定）：时间：${seed.time}；情境：${seed.situation}；基调：${seed.tone}。` : ''}${save.state.openingGuide ? `\n${save.state.openingGuide}` : ''}`;
   const messages = [{ role: 'system', content: buildSystemPrompt(save) }, { role: 'user', content: buildUserPrompt(save, `（游戏开始。请写开场：交代主角此刻所处的场景与处境，引出第一个需要玩家做决定的时刻。）${guide}`).replace(/第 1 回合/, '开场') }];
   try {
     const r = await chatStream(messages, { signal: G.abort.signal, onText: t => { G.stream.text = t; G.stream.thinking = false; updateStreamView(); }, onThinking: n => { G.stream.thinking = true; G.stream.rc = n; updateStreamView(); } });
@@ -5021,7 +5096,7 @@ async function startOpening(save) {
     if (!narrative) G.error = { message: 'AI 没有写出开场的正文，可以重试。', action: '__opening__', raw: r.text };
     else {
       const chips = applyDelta(save, delta, 0);
-      save.log.push({ id: uid(), turn: 0, action: '', seed, narrative, choices: choicesOf(delta), chips, warns: delta ? [] : ['开场没有返回状态更新，人物和属性保持开局设定。'], at: Date.now(), ...(delta ? {} : { raw: r.text.slice(-4000) }) });
+      save.log.push({ id: uid(), turn: 0, action: '', ...(seed ? { seed } : {}), narrative, choices: choicesOf(delta), chips, warns: delta ? [] : ['开场没有返回状态更新，人物和属性保持开局设定。'], at: Date.now(), ...(delta ? {} : { raw: r.text.slice(-4000) }) });
     }
     await persist(save); await saveSettings();
   } catch (e) {
@@ -5055,13 +5130,14 @@ ${entry.action ? `玩家行动：${entry.action}\n` : ''}${entry.narrative}
 【主角现在的情况】${playerName(save)}｜${genderOf(save)}｜${ageNum(st.stats.age) ?? '?'} 岁｜${heroStats}
 ${st.background ? `身世：${st.background.slice(0, 200)}\n` : ''}
 【人物】（基本信息是这些年开始时的，年龄已经算到 ${yearLabel(sc, ev.to)}）
-${people.map(c => `- ${c.name}｜${c.identity || '身份不明'}｜${charBasicText(sc, c, ev.to)}｜${c.status || '在世'}${c.met === false ? '｜主角还不认识' : `｜与主角：${c.relation || '—'}`}`).join('\n')}
+${people.map(c => `- ${c.name}｜${c.identity || '身份不明'}｜${charBasicText(sc, c, ev.to)}｜${c.status || '在世'}${c.met === false ? '｜主角还不认识' : `｜与主角：${c.relation || '—'}`}${c.now ? `｜现状：${c.now}` : ''}`).join('\n')}
 
 请推演到 ${yearLabel(sc, ev.to)} 时每个人的情况：
 1. 按每个人的天赋、处境和这个世界的规则，写出变化了的基本信息${cs.length ? `（key：${cs.map(d => `${d.key}=${d.label}`).join('、')}）` : ''}；这一回合剧情里写到的变化，照剧情来。
 2. 这些年里去世的人（寿数到了、战死、意外等），status 写“去世”，note 写一句原因；其他人如果有这些年里最重要的经历，写在 note 里（一句话，可以省略）。
-3. 主角的变化写在 player.stats 里，数值写新的值（key：${heroKeys.map(d => `${d.key}=${d.label}`).join('、')}）；剧情里已经交代的，照剧情来。
-只输出 {"player": {"stats": {}}, "characters": [{"name": "", "stats": {}, "status": "", "note": ""}]}` },
+3. 每个在世的人到 ${yearLabel(sc, ev.to)} 时的现状（在哪、在做什么、和谁在一起），写在 now 里；有主线时间线的剧本，按这些年里主线的进展来写。
+4. 主角的变化写在 player.stats 里，数值写新的值（key：${heroKeys.map(d => `${d.key}=${d.label}`).join('、')}）；剧情里已经交代的，照剧情来。
+只输出 {"player": {"stats": {}}, "characters": [{"name": "", "stats": {}, "status": "", "now": "", "note": ""}]}` },
     ], { temperature: 0.7, maxTokens: 8000, helper: true, signal: G.abort.signal });
     addUsage(save, r.usage);
     const o = parseLooseJSON(r.text);
@@ -5082,6 +5158,7 @@ function applyEvolution(save, o, turn, years) {
     const c = cd && findChar(st.characters, cd.name); if (!c) continue;
     let touched = mergeCharStats(sc, c, cd.stats, null) > 0;
     if (str(cd.status) && str(cd.status) !== c.status) { c.status = str(cd.status); touched = true; if (isGone(c)) chips.push({ t: `${c.name} ${c.status}`, c: 'down' }); }
+    if (str(cd.now) && str(cd.now) !== c.now) { c.now = str(cd.now); touched = true; }
     if (str(cd.note)) { c.notes = c.notes || []; c.notes.push({ turn, text: `（这 ${years} 年）${str(cd.note)}` }); touched = true; }
     if (touched) changed++;
   }
@@ -5264,20 +5341,19 @@ ${input}
 >>>
 
 请据此写一段“文风说明”，给 AI 写互动小说时用：
-1. 150～300 字，每一句都直接说明要怎么写，例如“短句为主”“对白多用口语”。
+1. 150～300 字，每一句都直接说明要怎么写。
 2. 说清楚：叙述的腔调、句子的长短和节奏、用词（文白、口语、专有名词）、修辞的多少、对白的风格、描写的侧重点、幽默和情绪怎么处理。
 3. 材料是文字样本时，提炼它的风格，用你自己的话来描述。
 4. 互动小说用第二人称“你”指代主角，文风说明沿用这个人称。
-5. 文风说明本身用平实的话写。
 只输出文风说明正文。` },
   ], { temperature: 0.5, maxTokens: 800 });
   addUsage(G.save, r.usage);
   return str(r.text);
 }
 /* 新建或编辑一个自定义文风，返回保存后的文风对象或 null */
-function styleEditor(existing) {
+function styleEditor(existing, sample = '') {
   const name = h('input', { id: 'sty-name', placeholder: '例如：我喜欢的古早言情' }); name.value = existing?.name || '';
-  const src = h('textarea', { id: 'sty-src', rows: 6, placeholder: '粘贴一段你喜欢的文字，或者直接描述你想要的感觉，比如“像某某作家那样冷淡、幽默，对白很多”。' });
+  const src = h('textarea', { id: 'sty-src', rows: 6, placeholder: '粘贴一段你喜欢的文字，或者直接描述你想要的感觉，比如“像某某作家那样冷淡、幽默，对白很多”。' }); src.value = sample;
   const out = h('textarea', { id: 'sty-out', rows: 8, placeholder: 'AI 整理后的文风说明会出现在这里，你也可以直接手写。' }); out.value = existing?.text || '';
   const btn = h('button', { class: 'btn sm', onclick: async () => {
     if (!str(src.value)) { toast('先在上面填一段文字或描述'); return; }
@@ -5341,6 +5417,9 @@ async function renderShelf() {
   const saves = (await DB.all('saves')).sort((a, b) => b.updatedAt - a.updatedAt);
   const sl = $('#save-list'); sl.innerHTML = '';
   if (!saves.length) sl.append(h('div', { class: 'empty' }, '还没有存档。从下面选一个剧本开始。'));
+  if (MARKS.length) sl.append(h('div', { class: 'card save-item', onclick: openAllMarks },
+    h('div', { class: 'turn-badge' }, '摘录'),
+    h('div', { class: 'meta' }, h('b', {}, '我的摘录'), h('small', {}, `${MARKS.length} 条收藏的句子 · 删掉存档也不会丢`))));
   for (const sv of saves) {
     sl.append(h('div', { class: 'card save-item', onclick: () => openSave(sv.id) },
       h('div', { class: 'turn-badge' }, `第${sv.state.turn}回`),
@@ -5642,7 +5721,7 @@ ${keyDocs.join('\n')}` },
 async function genPersonaText(script, ctx, wish) {
   const r = await chatOnce([
     { role: 'system', content: '你是互动小说的角色设定作者。你只输出 JSON。' },
-    { role: 'user', content: `剧本：${script.title}\n${script.intro || ''}\n\n主角目前的设定：\n${ctxText(script, { ...ctx, persona: '' })}\n\n玩家的要求：${str(wish) || '无'}\n灵感关键词：${pickN(GEN_SEEDS, 2).join('、')}（可以不用）\n随机编号：${Math.floor(Math.random() * 1e6)}\n\n请为主角写一段性格描述（60～100 字）：要有具体的言行习惯和一点矛盾之处，和上面的设定协调，用平常说话的句子写。只输出 {"persona": "……"}` },
+    { role: 'user', content: `剧本：${script.title}\n${script.intro || ''}\n\n主角目前的设定：\n${ctxText(script, { ...ctx, persona: '' })}\n\n玩家的要求：${str(wish) || '无'}\n灵感关键词：${pickN(GEN_SEEDS, 2).join('、')}（可以不用）\n随机编号：${Math.floor(Math.random() * 1e6)}\n\n请为主角写一段性格描述（60～100 字）：性格特点、说话做事的习惯、在意什么，和上面的设定协调。只输出 {"persona": "……"}` },
   ], { temperature: aiTemp(), maxTokens: 1500 });
   addUsage(null, r.usage);
   const o = parseLooseJSON(r.text);
@@ -5679,7 +5758,7 @@ ${picksText}
 1. 把上面各项设定自然地串成一个人的经历；
 2. 写出一两个具体的童年片段、一个对${pron}很重要的人、一个至今还没解开的心结；
 3. 和剧本设定保持一致，写到开局那一刻为止；
-4. 用平实的叙述写，只输出身世正文。` },
+4. 只输出身世正文。` },
   ], { temperature: 0.9, maxTokens: 1000 });
   addUsage(null, r.usage);
   return str(r.text);
@@ -5716,10 +5795,11 @@ async function syncScript(save, lib) {
       if (ex) {
         for (const f of STATIC) if (c[f] !== undefined && str(c[f])) ex[f] = str(c[f]);
         if (!str(ex.gender) && str(c.gender)) ex.gender = str(c.gender);
+        if (!str(ex.now) && str(c.now) && st.year === y0) ex.now = str(c.now); // 现状是故事开始时的；故事已经过了一年以上就不补，交给 AI 更新
         if (ex.born === null || ex.born === undefined) ex.born = bornFrom(c, y0);
         ex.stats = ex.stats || {};
         for (const [k, v] of Object.entries(c.stats || {})) if (ex.stats[k] === undefined || str(ex.stats[k]) === '') ex.stats[k] = v;
-      } else st.characters.push(makeCharacter(c, st.turn, y0));
+      } else { const nc = makeCharacter(c, st.turn, y0); dealSeeds([nc], lib, usedSeeds(st)); st.characters.push(nc); }
     }
     normalizeState(st, lib);
   };
@@ -5762,8 +5842,25 @@ function renderGameHeader() {
   $('#g-title').textContent = sv.script.title;
   $('#g-sub').textContent = `${yearLabel(sv.script, sv.state.year)}${sv.state.stage ? ' · ' + sv.state.stage : ''} · 第 ${sv.state.turn} 回合${G.summarizing ? ' · 整理记忆中' : ''}`;
 }
-function narrHTML(text) {
-  return text.split(/\n+/).map(p => p.trim()).filter(Boolean).map(p => `<p>${esc(p).replace(/(“[^”]{1,400}”|「[^」]{1,400}」)/g, '<span class="dlg">$1</span>')}</p>`).join('');
+/* 正文分段；对白加样式；收藏过的句子加划线（marks 是这一回合的收藏） */
+function narrHTML(text, marks) {
+  const lines = (marks || []).flatMap(m => String(m.text).split('\n')).map(t => t.trim()).filter(t => t.length >= 2);
+  return text.split(/\n+/).map(p => p.trim()).filter(Boolean).map(p => `<p>${paraHTML(p, lines)}</p>`).join('');
+}
+function paraHTML(p, lines) {
+  if (!lines.length || !lines.some(t => p.includes(t))) return esc(p).replace(/(“[^”]{1,400}”|「[^」]{1,400}」)/g, '<span class="dlg">$1</span>');
+  const n = p.length, dlg = new Uint8Array(n), hl = new Uint8Array(n);
+  for (const m of p.matchAll(/“[^”]{1,400}”|「[^」]{1,400}」/g)) dlg.fill(1, m.index, m.index + m[0].length);
+  for (const t of lines) for (let i = p.indexOf(t); i >= 0; i = p.indexOf(t, i + t.length)) hl.fill(1, i, i + t.length);
+  let out = '';
+  for (let i = 0; i < n;) {
+    let j = i + 1; while (j < n && dlg[j] === dlg[i] && hl[j] === hl[i]) j++;
+    let seg = esc(p.slice(i, j));
+    if (dlg[i]) seg = `<span class="dlg">${seg}</span>`;
+    if (hl[i]) seg = `<mark class="hl">${seg}</mark>`;
+    out += seg; i = j;
+  }
+  return out;
 }
 const RENDER_WINDOW = 40;
 let renderFrom = null;
@@ -5781,7 +5878,7 @@ function renderLog() {
   const snapTurns = new Set((sv.snapshots || []).map(x => x.turn));
   entries.slice(start).forEach((e, i) => {
     const idx = start + i, isLast = idx === entries.length - 1;
-    const el = h('div', { class: 'entry', 'data-turn': e.turn });
+    const el = h('div', { class: 'entry', 'data-turn': e.turn, 'data-id': e.id });
     const canRewind = e.turn > 0 && idx >= rewindFrom && snapTurns.has(e.turn) && !G.busy && !G.stream;
     el.append(h('div', { class: 'turn-mark' }, e.turn === 0 ? '开场' : `第 ${e.turn} 回合`,
       canRewind ? h('button', { class: 'rw', title: '回到这一回合重新选择', onclick: async () => {
@@ -5791,7 +5888,7 @@ function renderLog() {
         if (r) { $('#action').value = r.action || ''; autoGrow(); scrollLogToEnd(true); }
       } }, '↺ 重选') : null));
     if (e.action) el.append(h('div', { class: 'act' }, h('span', {}, e.action)));
-    el.append(h('div', { class: 'narr', html: narrHTML(e.narrative) }));
+    el.append(h('div', { class: 'narr', html: narrHTML(e.narrative, marksOfEntry(e.id)) }));
     if (!str(e.narrative)) el.append(h('div', { class: 'warn-line' }, '这一段没有正文。'));
     if (e.chips?.length) el.append(h('div', { class: 'chips' }, ...e.chips.map(c => h('span', { class: 'chip' + (c.c ? ' c-' + c.c : '') }, c.t))));
     for (const w of e.warns || []) el.append(h('div', { class: 'warn-line' }, w));
@@ -5907,8 +6004,145 @@ $('#send').onclick = () => {
 $('#btn-leave').onclick = () => { if (G.busy) { toast('正在生成，先停止或等它写完'); return; } G.save = null; renderFrom = null; back(); };
 $('#btn-panel').onclick = () => openSheet();
 
+/* ---------------- 划线收藏（摘录） ----------------
+   读剧情时选中喜欢的句子，点底部的“划线收藏”。收藏单独保存（kv 'marks'），回退剧情、删掉存档都不会丢。
+   收藏只给玩家自己看，不发给 AI；想让 AI 学这种写法，可以在摘录页把它们整理成一个文风。 */
+let MARKS = [];
+async function loadMarks() { const r = await DB.get('kv', 'marks'); MARKS = Array.isArray(r?.value) ? r.value : []; }
+async function saveMarks() { await DB.put('kv', { id: 'marks', value: MARKS }); }
+const marksOfEntry = id => MARKS.filter(m => m.entryId === id);
+const charsInText = (save, text) => save.state.characters.filter(c => [c.name, ...(c.aliases || [])].some(n => n && text.includes(n))).map(c => c.name);
+function selectionMark() {
+  const sel = window.getSelection(); if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+  const text = String(sel.toString()).split(/\n+/).map(t => t.trim()).filter(Boolean).join('\n');
+  if (text.length < 2) return null;
+  const el = n => n && (n.nodeType === 1 ? n : n.parentElement);
+  const a = el(sel.anchorNode), b = el(sel.focusNode);
+  const ea = a?.closest('#log .entry'), eb = b?.closest('#log .entry');
+  if (!ea || ea !== eb || !ea.dataset.id || !a.closest('.narr') || !b.closest('.narr')) return null;
+  return { entryId: ea.dataset.id, text: text.slice(0, 3000) };
+}
+const markBtn = h('button', { class: 'mark-btn', type: 'button', hidden: true }, '划线收藏');
+let pendingMark = null, markHideTimer = 0, markPressedAt = 0;
+document.addEventListener('selectionchange', () => {
+  if (!G.save || $('#v-game').hidden) return;
+  const m = selectionMark();
+  clearTimeout(markHideTimer);
+  if (m) { pendingMark = m; markBtn.hidden = false; }
+  else markHideTimer = setTimeout(() => { pendingMark = null; markBtn.hidden = true; }, 400); // 手指点按钮时选区会先消失，留一点时间
+});
+markBtn.addEventListener('pointerdown', e => { e.preventDefault(); markPressedAt = Date.now(); addMark(); });
+markBtn.addEventListener('click', e => { e.preventDefault(); if (Date.now() - markPressedAt > 800) addMark(); });
+async function addMark(m = pendingMark) {
+  pendingMark = null; markBtn.hidden = true;
+  const sv = G.save; if (!m || !sv) return null;
+  const e = sv.log.find(x => x.id === m.entryId); if (!e) return null;
+  if (marksOfEntry(e.id).some(x => x.text === m.text)) { toast('这段已经收藏过了'); return null; }
+  const mk = { id: uid(), saveId: sv.id, saveName: sv.name, scriptId: sv.scriptId, scriptTitle: sv.script.title, entryId: e.id, turn: e.turn, text: m.text, chars: charsInText(sv, m.text), at: Date.now() };
+  MARKS.push(mk); await saveMarks();
+  try { window.getSelection().removeAllRanges(); } catch {}
+  refreshEntryMarks(e);
+  toast('已收藏，可以在状态面板的“摘录”里看');
+  return mk;
+}
+function refreshEntryMarks(e) { const n = document.querySelector(`#log .entry[data-id="${e.id}"] .narr`); if (n) n.innerHTML = narrHTML(e.narrative, marksOfEntry(e.id)); }
+async function deleteMark(m) {
+  MARKS = MARKS.filter(x => x.id !== m.id); await saveMarks();
+  const e = G.save && G.save.id === m.saveId ? G.save.log.find(x => x.id === m.entryId) : null;
+  if (e) refreshEntryMarks(e);
+}
+/* 点一下划线：看这段摘录，可以取消收藏 */
+$('#log').addEventListener('click', async ev => {
+  const mk = ev.target.closest && ev.target.closest('mark.hl'); if (!mk) return;
+  const sel = window.getSelection(); if (sel && !sel.isCollapsed) return;
+  const e = G.save?.log.find(x => x.id === mk.closest('.entry')?.dataset.id); if (!e) return;
+  const seg = mk.textContent.trim();
+  const hits = marksOfEntry(e.id).filter(m => m.text.split('\n').some(l => l.includes(seg) || seg.includes(l.trim())));
+  if (!hits.length) return;
+  const v = await openModal({ title: '摘录', body: h('div', { class: 'stack' }, ...hits.map(m => h('div', { class: 'mark-text' }, m.text))),
+    actions: [{ label: '取消收藏', value: 'del', danger: true }, { label: '好', value: null, primary: true }] });
+  if (v === 'del') { for (const m of hits) await deleteMark(m); toast('已取消收藏'); }
+});
+const markWhere = m => m.turn === 0 ? '开场' : `第 ${m.turn} 回合`;
+function marksText(list, withSource) {
+  return list.map(m => `${withSource ? `《${m.scriptTitle}》${m.saveName} · ` : ''}${markWhere(m)}${m.chars?.length ? ' · ' + m.chars.join('、') : ''}\n${m.text}`).join('\n\n');
+}
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); toast('已复制'); }
+  catch { download(`长夜书局-摘录-${new Date().toISOString().slice(0, 10)}.txt`, t, 'text/plain'); }
+}
+/* 摘录列表：inGame 时是当前存档的，可以跳回原文；否则是全部存档的 */
+function marksBrowser(all, { inGame, saveIds } = {}) {
+  const wrap = h('div');
+  if (!all.length) {
+    wrap.append(h('div', { class: 'empty' }, inGame ? '还没有收藏。读剧情时选中喜欢的句子，点屏幕下方的“划线收藏”。' : '还没有收藏。'));
+    wrap.append(h('p', { class: 'small muted' }, '收藏只保存在这台设备上，不会发给 AI。回退剧情、删掉存档，收藏都还在。'));
+    return wrap;
+  }
+  let filter = '';
+  const names = [...new Set(all.flatMap(m => m.chars || []))];
+  const chipRow = h('div', { class: 'mark-filter' });
+  const box = h('div', { class: 'stack' });
+  const shown = () => all.filter(m => !filter || (m.chars || []).includes(filter));
+  const draw = () => {
+    chipRow.innerHTML = '';
+    if (names.length) for (const n of ['', ...names]) chipRow.append(h('button', { class: 'chip-btn', 'aria-pressed': String(filter === n), onclick: () => { filter = n; draw(); } }, n || `全部 ${all.length}`));
+    box.innerHTML = '';
+    for (const m of shown()) box.append(markCard(m, { inGame, exists: saveIds ? saveIds.has(m.saveId) : true }, () => { all.splice(all.indexOf(m), 1); if (filter && !all.some(x => (x.chars || []).includes(filter))) filter = ''; draw(); }));
+  };
+  draw();
+  wrap.append(chipRow,
+    h('div', { class: 'row', style: 'margin-bottom:12px' },
+      h('button', { class: 'btn sm', onclick: () => copyText(marksText(shown(), !inGame)) }, '复制'),
+      h('button', { class: 'btn sm', onclick: () => download(`长夜书局-摘录-${new Date().toISOString().slice(0, 10)}.txt`, marksText(shown(), true), 'text/plain') }, '导出成文本'),
+      h('button', { class: 'btn sm ghost', onclick: async () => { if (!inGame) closeModal(null); const r = await styleEditor(null, shown().map(m => m.text).join('\n\n')); if (r) toast('已存进“我的文风”，可以在剧本设置里选用'); } }, '整理成一个文风')),
+    box,
+    h('p', { class: 'small muted', style: 'margin:14px 0 0' }, '收藏只给你自己看，不会发给 AI。想让 AI 往这个方向写，可以点“整理成一个文风”，再到剧本设置里选用。'));
+  return wrap;
+}
+function markCard(m, { inGame, exists }, onDel) {
+  const e = inGame && G.save ? G.save.log.find(x => x.id === m.entryId) : null;
+  let armed = false;
+  const del = h('button', { class: 'btn sm ghost danger', onclick: async () => {
+    if (!armed) { armed = true; del.textContent = '确定删除'; setTimeout(() => { armed = false; del.textContent = '删除'; }, 3000); return; }
+    await deleteMark(m); onDel();
+  } }, '删除');
+  const go = inGame ? (e ? h('button', { class: 'btn sm ghost', onclick: () => jumpToEntry(e) }, '看原文') : h('small', { class: 'faint' }, '原回合已撤销'))
+    : exists ? h('button', { class: 'btn sm ghost', onclick: () => gotoMark(m) }, '去原文') : h('small', { class: 'faint' }, '存档已删除');
+  return h('div', { class: 'card mark-card' },
+    h('div', { class: 'mark-text' }, m.text),
+    h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;margin-top:8px;flex-wrap:nowrap' },
+      h('small', { class: 'muted' }, `${inGame ? '' : `《${m.scriptTitle}》${m.saveName} · `}${markWhere(m)}${m.chars?.length ? ' · ' + m.chars.join('、') : ''}`),
+      h('div', { class: 'row', style: 'flex-wrap:nowrap;align-items:center' }, go, del)));
+}
+function jumpToEntry(e) {
+  if (!$('#sheet').hidden) closeSheet();
+  const idx = G.save.log.indexOf(e);
+  const start = renderFrom === null ? Math.max(0, G.save.log.length - RENDER_WINDOW) : renderFrom;
+  if (idx >= 0 && idx < start) { renderFrom = Math.max(0, idx - 1); renderLog(); }
+  const el = document.querySelector(`#log .entry[data-id="${e.id}"]`);
+  if (el) { $('#log').scrollTop = Math.max(0, el.offsetTop - 12); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600); }
+}
+async function gotoMark(m) {
+  closeModal(null);
+  if (!(await DB.get('saves', m.saveId))) { toast('这个存档已经删除了'); return; }
+  await openSave(m.saveId);
+  const e = G.save?.log.find(x => x.id === m.entryId);
+  if (e) requestAnimationFrame(() => jumpToEntry(e)); else toast('原来那一回合已经撤销了，摘录还在');
+}
+function sheetMarks(b) {
+  const list = MARKS.filter(m => m.saveId === G.save.id).sort((a, x) => a.turn - x.turn || a.at - x.at);
+  b.append(marksBrowser(list, { inGame: true }));
+}
+async function openAllMarks() {
+  const saveIds = new Set((await DB.all('saves')).map(s => s.id));
+  const list = [...MARKS].sort((a, b) => b.at - a.at);
+  await openModal({ title: `我的摘录（${list.length}）`, body: marksBrowser(list, { inGame: false, saveIds }), actions: [{ label: '关闭', value: null, primary: true }] });
+  if ($('#v-shelf') && !$('#v-shelf').hidden) renderShelf();
+}
+
 /* ---------------- 状态面板 ---------------- */
-const SHEET_TABS = [['status', '状态'], ['chars', '人物'], ['events', '事件'], ['goals', '目标'], ['play', '玩法'], ['memory', '记忆'], ['save', '存档']];
+const SHEET_TABS = [['status', '状态'], ['chars', '人物'], ['events', '事件'], ['goals', '目标'], ['marks', '摘录'], ['play', '玩法'], ['memory', '记忆'], ['save', '存档']];
 let sheetTab = 'status';
 function openSheet(tab) { if (tab) sheetTab = tab; $('#scrim').hidden = false; $('#sheet').hidden = false; renderSheet(); }
 function closeSheet() { $('#scrim').hidden = true; $('#sheet').hidden = true; renderLog(); renderGameHeader(); renderPaceBar(); }
@@ -5917,7 +6151,7 @@ function renderSheet() {
   const tabs = $('#sheet-tabs'); tabs.innerHTML = '';
   for (const [k, l] of SHEET_TABS) tabs.append(h('button', { class: 'tab', role: 'tab', 'aria-selected': String(k === sheetTab), onclick: () => { sheetTab = k; renderSheet(); } }, l));
   const b = $('#sheet-body'); b.innerHTML = ''; b.scrollTop = 0;
-  ({ status: sheetStatus, chars: sheetChars, events: sheetEvents, goals: sheetGoals, play: sheetPlay, memory: sheetMemory, save: sheetSave })[sheetTab](b);
+  ({ status: sheetStatus, chars: sheetChars, events: sheetEvents, goals: sheetGoals, marks: sheetMarks, play: sheetPlay, memory: sheetMemory, save: sheetSave })[sheetTab](b);
 }
 async function commit(msg) { await persist(G.save); renderSheet(); renderGameHeader(); if (msg) toast(msg); }
 function guardBusy() { if (G.busy) { toast('生成中，稍后再改'); return true; } return false; }
@@ -5987,7 +6221,7 @@ function sheetChars(b) {
       h('div', { class: 'body' },
         h('div', { class: 'name' }, h('b', {}, c.name), h('small', {}, [c.relation, c.identity].filter(Boolean).join(' · ')), c.status && c.status !== '在世' ? h('span', { class: 'pill fail' }, c.status) : null, h('small', {}, IMPORTANCE_TEXT[c.importance])),
         basicLine(sv.script, c, st.year),
-        c.opinion ? h('div', { class: 'op' }, `“${c.opinion}”`) : h('div', { class: 'op' }, c.brief || ''),
+        h('div', { class: 'op' }, c.opinion || c.brief || ''),
         traitTags(c),
         h('div', { class: 'mini-meters' },
           h('span', {}, L.friendliness), h('div', { class: 'meter' }, h('i', { style: `width:${c.friendliness}%` })), h('span', {}, Math.round(c.friendliness)),
@@ -6012,7 +6246,7 @@ function basicLine(sc, c, year) {
   }
   return bits.length ? h('div', { class: 'basic' }, bits.join(' · ')) : null;
 }
-function hasHidden(c) { return !!(c.motive || c.backstory || c.secret); }
+function hasHidden(c) { return !!(c.motive || c.backstory || c.secret || openSeeds(c).length); }
 function traitTags(c) {
   const t = c.traits || [];
   if (!t.length && !hasHidden(c)) return null;
@@ -6048,22 +6282,27 @@ async function editChar(c) {
     { key: 'personality', label: '性格', type: 'textarea', rows: 2 },
     { key: 'appearance', label: '外貌', type: 'textarea', rows: 2 },
     { key: 'brief', label: '简介', type: 'textarea', rows: 2 },
+    { key: 'now', label: '现状', type: 'textarea', rows: 2, hint: 'Ta 此刻在哪、在做什么、和谁在一起。AI 会随剧情更新；AI 写错了可以在这里改。' },
     { key: 'notes', label: '与主角的往事', type: 'textarea', rows: 4, hint: '每行一条，格式“回合|内容”。每回合只把最近 8 条发给 AI。' },
-    { key: 'motive', label: '立场与动机', type: 'textarea', rows: 2, fold: '隐藏设定（剧透，只给 AI 看）' },
-    { key: 'backstory', label: '过往经历', type: 'textarea', rows: 3, fold: '隐藏设定（剧透，只给 AI 看）' },
-    { key: 'secret', label: '秘密', type: 'textarea', rows: 2, fold: '隐藏设定（剧透，只给 AI 看）', hint: 'AI 会依据这些设定来演绎人物，并在剧情里慢慢揭示。留空时 AI 会在人物有重要戏份时自己补全。' },
+    // 隐藏设定只在玩家自己添加人物时填写；已有人物的隐藏设定由剧情揭示，不在这里显示
+    ...(c ? [] : [
+      { key: 'motive', label: '立场与动机', type: 'textarea', rows: 2, fold: '隐藏设定（只给 AI 看）' },
+      { key: 'backstory', label: '过往经历', type: 'textarea', rows: 3, fold: '隐藏设定（只给 AI 看）' },
+      { key: 'secret', label: '秘密', type: 'textarea', rows: 2, fold: '隐藏设定（只给 AI 看）', hint: 'AI 会依据这些设定来演绎人物，并在剧情里慢慢揭示。留空时 AI 会在人物有重要戏份时自己补全。' },
+    ]),
   ], base, { extra: c ? [{ label: '删除', danger: true, value: 'del' }] : [], prefix: c ? traitPanel(c) : null });
   if (r === 'del') { if (await ask('删除人物', `删除「${c.name}」的人物卡？AI 之后将不再记得此人的设定。`, '删除', true)) { st.characters.splice(st.characters.indexOf(c), 1); commit('已删除'); } return; }
   if (!r || !str(r.name)) return;
   const upd = {
     name: str(r.name), aliases: str(r.aliases).split(/[、,，]/).map(str).filter(Boolean), identity: str(r.identity), relation: str(r.relation), address: str(r.address), importance: r.importance,
     status: str(r.status) || '在世', met: !!r.met, friendliness: clamp(num(r.friendliness), 0, 100), affection: clamp(num(r.affection), 0, 100), opinion: str(r.opinion), personality: str(r.personality),
-    appearance: str(r.appearance), brief: str(r.brief), motive: str(r.motive), backstory: str(r.backstory), secret: str(r.secret),
+    appearance: str(r.appearance), brief: str(r.brief), now: str(r.now),
+    ...(c ? {} : { motive: str(r.motive), backstory: str(r.backstory), secret: str(r.secret) }),
     gender: str(r.gender), born: ageNum(r.age) === null ? (c ? c.born : null) : st.year - ageNum(r.age),
     stats: Object.fromEntries(cs.filter(d => str(r['cs_' + d.key]) !== '').map(d => [d.key, d.type === 'number' ? clamp(num(r['cs_' + d.key]), d.min, d.max) : str(r['cs_' + d.key])])),
     notes: str(r.notes).split('\n').map(str).filter(Boolean).map(line => { const m = line.match(/^(\d+)\s*[|｜]\s*(.+)$/); return m ? { turn: +m[1], text: m[2] } : { turn: st.turn, text: line }; }),
   };
-  if (c) Object.assign(c, upd); else st.characters.push(makeCharacter(upd, st.turn));
+  if (c) Object.assign(c, upd); else { const nc = makeCharacter(upd, st.turn); dealSeeds([nc], sc, usedSeeds(st)); st.characters.push(nc); }
   commit('已保存');
 }
 
@@ -6138,7 +6377,7 @@ function sheetMemory(b) {
   b.append(h('div', { class: 'row end' },
     h('button', { class: 'btn sm', disabled: G.summarizing || G.busy || !pending, onclick: () => { maybeSummarize(true); toast('开始整理，完成后会自动更新'); } }, '立即总结全部'),
     h('button', { class: 'btn sm primary', onclick: async () => { if (guardBusy()) return; st.memory = mem.value.trim(); await commit('摘要已保存'); } }, '保存摘要')));
-  b.append(h('details', { class: 'fold', style: 'margin-top:18px' }, h('summary', {}, '查看下一回合会发给 AI 的完整内容'),
+  b.append(h('details', { class: 'fold', style: 'margin-top:18px' }, h('summary', {}, '查看下一回合会发给 AI 的完整内容（含隐藏设定，会剧透）'),
     h('pre', { style: 'white-space:pre-wrap;font-size:12px;line-height:1.55;margin:10px 0 0;max-height:50vh;overflow:auto' }, buildSystemPrompt(sv) + '\n\n——————\n\n' + buildUserPrompt(sv, '（下一回合的行动）'))));
 }
 
@@ -6318,17 +6557,18 @@ function renderSettings() {
 
   b.append(h('div', { class: 'sec-h' }, '数据'));
   b.append(h('div', { class: 'row' },
-    h('button', { class: 'btn', onclick: async () => { const all = { app: 'changye-wenyou', v: APP_VERSION, exportedAt: Date.now(), scripts: await DB.all('scripts'), saves: await DB.all('saves'), prefs: { prefs: S.prefs, profiles: S.profiles, defaultProfile: S.defaultProfile, customStyles: S.customStyles, globalStyle: S.globalStyle, length: S.length, pace: S.pace, scriptPrefs: S.scriptPrefs } }; download(`长夜书局-全部备份-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(all)); } }, '备份全部剧本和存档'),
+    h('button', { class: 'btn', onclick: async () => { const all = { app: 'changye-wenyou', v: APP_VERSION, exportedAt: Date.now(), scripts: await DB.all('scripts'), saves: await DB.all('saves'), marks: MARKS, prefs: { prefs: S.prefs, profiles: S.profiles, defaultProfile: S.defaultProfile, customStyles: S.customStyles, globalStyle: S.globalStyle, length: S.length, pace: S.pace, scriptPrefs: S.scriptPrefs } }; download(`长夜书局-全部备份-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(all)); } }, '备份全部剧本和存档'),
     h('button', { class: 'btn', onclick: async () => {
       const text = await pickFile(); if (!text) return;
       let all; try { all = JSON.parse(text); } catch { toast('文件不是有效的 JSON'); return; }
       if (all?.app !== 'changye-wenyou') { toast('这不是长夜书局的备份文件'); return; }
       for (const s of all.scripts || []) await DB.put('scripts', s);
       for (const s of all.saves || []) await DB.put('saves', s);
+      if (Array.isArray(all.marks)) { const have = new Set(MARKS.map(m => m.id)); MARKS.push(...all.marks.filter(m => m && m.id && !have.has(m.id))); await saveMarks(); }
       if (all.prefs) { Object.assign(S, all.prefs); await saveSettings(); await loadSettings(); renderSettings(); }
       toast(`已恢复 ${(all.scripts || []).length} 个剧本、${(all.saves || []).length} 个存档`);
     } }, '从备份恢复')));
-  b.append(h('p', { class: 'small muted', style: 'margin:16px 0 12px' }, '备份包含剧本、存档、偏好、口味方案和文风库，不包含 API 密钥。'));
+  b.append(h('p', { class: 'small muted', style: 'margin:16px 0 12px' }, '备份包含剧本、存档、摘录、偏好、口味方案和文风库，不包含 API 密钥。'));
   b.append(h('div', { class: 'sec-h' }, '版本'));
   b.append(h('div', { class: 'row', style: 'align-items:center;margin-bottom:30px' },
     h('span', { class: 'small muted', style: 'flex:1' }, `当前网页版本：${BUILD}`),
@@ -6395,6 +6635,8 @@ async function applyUpdate() {
 (async function boot() {
   await DB.open();
   await loadSettings();
+  await loadMarks();
+  document.body.append(markBtn);
   if (DB.fallback) toast('浏览器不支持 IndexedDB，改用简易存储，容量较小');
   renderShelf();
   window.addEventListener('beforeunload', e => { if (G.busy) { e.preventDefault(); e.returnValue = ''; } });
@@ -6403,7 +6645,7 @@ async function applyUpdate() {
 })();
 
 // 供测试使用
-window.__wenyou = { G, S: () => S, buildSystemPrompt, buildUserPrompt, splitOutput, applyDelta, parseLooseJSON, normalizeScript, persist, ageNum, splitStageYear, yearLabel, charBasicText, applyEvolution };
+window.__wenyou = { G, S: () => S, buildSystemPrompt, buildUserPrompt, splitOutput, applyDelta, parseLooseJSON, normalizeScript, persist, ageNum, splitStageYear, yearLabel, charBasicText, applyEvolution, dealSeeds, migrateSave, narrHTML, addMark, marks: () => MARKS, resolveStyle };
 </script>
 </body>
 </html>

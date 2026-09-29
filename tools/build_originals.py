@@ -16,11 +16,11 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def npc(name, gender, age, stats, identity, personality, brief, motive, backstory, secret,
         appearance="", relation="陌生", opinion="还不认识你。", friendliness=40, affection=0,
-        importance="supporting", met=False, address=""):
+        importance="supporting", met=False, address="", now=""):
     return {"name": name, "gender": gender, "age": age, "stats": stats, "identity": identity, "appearance": appearance,
             "personality": personality, "relation": relation, "brief": brief, "opinion": opinion,
             "friendliness": friendliness, "affection": affection, "importance": importance,
-            "motive": motive, "backstory": backstory, "secret": secret, "met": met, "address": address}
+            "motive": motive, "backstory": backstory, "secret": secret, "met": met, "address": address, "now": now}
 
 
 def save(script):

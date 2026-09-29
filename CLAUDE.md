@@ -68,30 +68,32 @@
 
 | id | 名称 | 版本 | 要点 |
 |---|---|---|---|
-| `douluo-wuhundian` | 斗罗大陆 · 武魂殿之女 | 3 | 同人。年龄比原著整体大六岁。13 个主线节点（隐藏）、蝴蝶效应。23 个原著人物有开局时的武魂、等级、魂环、魂技（按我的原著知识填的，用户可以在人物卡里改）。起点：索托城分殿见习 / 武魂殿学院（与黄金一代同届）/ 天斗城分殿文书。 |
-| `hehuan-wenqing` | 合欢宗 · 问情 | 1 | 原创修仙。情道：七情真正经历过、看明白了，修为进度上涨。纪年“玄历{n}年”，从 3620 年开始。常设 8 人（绛雪、红袖、妙音、沈清砚、谢无霜、夜阑、了尘、温行）。 |
-| `dushi-qianjin` | 海城千金 | 1 | 原创现代都市，成人向感情戏。流动资金按万元计，花钱要扣。纪年“{n}年”，从 2026 年开始。常设 8 人（唐柚、周叙、陆屿、许烬、程野、林小满、顾景川、宋知意）。 |
-| `xianchao-quanmou` | 大胤仙朝 · 权谋 | 1 | 原创修仙权谋。班底、把柄、朝堂声望、情报网。纪年“胤历{n}年”，从 1203 年开始。常设 7 人（姬晚照、姬渊、谢无咎、萧衡、苏挽、云蘅、影七）。 |
-| `demo-fog-harbor` | 雾港来信 | 1 | 手写在 `index.html` 里的短篇民国悬疑，演示用。 |
+| `douluo-wuhundian` | 斗罗大陆 · 武魂殿之女 | 4 | 同人。年龄比原著整体大六岁。16 个主线节点（隐藏）、蝴蝶效应。23 个原著人物的年龄、魂力、魂环、魂技、现状按原著连载版逐章核对过（2026-09-29，低可信度的条目写在 `ERAS` 末尾的注释里）。开局时间：原著开篇 / 精英大赛前夕（+2 年）/ 猎魂行动前夕（+8 年）。起点：索托城主殿见习 / 武魂殿学院低年级（黄金一代是前辈）/ 天斗城圣殿文书。天赋等级按开局年龄取值（`byAge`）。 |
+| `qindi-milan` | 琴帝 · 米兰魔武学院 | 1 | 同人。年龄比原著整体大两岁。从叶音竹刚到米兰城、招生报名最后一天开始（紫已回极北荒原）。36 个原著人物、25 个主线节点。用户的要求：女主角是故事中心；苏拉、海洋、香鸾等女性角色有自己的目标，不围着叶音竹转，外貌中性，感情不预设（原著香鸾一夜情那段只作为原著事实，不是必然）；要有姐妹情的空间。生成脚本 `tools/build_qindi.py`。 |
+| `hehuan-wenqing` | 合欢宗 · 问情 | 2 | 原创修仙。情道：七情真正经历过、看明白了，修为进度上涨。纪年“玄历{n}年”，从 3620 年开始。常设 8 人（绛雪、红袖、妙音、沈清砚、谢无霜、夜阑、了尘、温行）。 |
+| `dushi-qianjin` | 海城千金 | 2 | 原创现代都市，成人向感情戏。流动资金按万元计，花钱要扣。纪年“{n}年”，从 2026 年开始。常设 8 人（唐柚、周叙、陆屿、许烬、程野、林小满、顾景川、宋知意）。 |
+| `xianchao-quanmou` | 大胤仙朝 · 权谋 | 2 | 原创修仙权谋。班底、把柄、朝堂声望、情报网。纪年“胤历{n}年”，从 1203 年开始。常设 7 人（姬晚照、姬渊、谢无咎、萧衡、苏挽、云蘅、影七）。 |
+| `demo-fog-harbor` | 雾港来信 | 1 | 手写在 `index.html` 里的短篇民国悬疑，演示用。没有固定开场白，`openingRandom: false`，开场按【开端】写。 |
 
 ## 代码结构
 
 - `index.html`：全部代码。顺序：样式 → 存储 → 设置 → 内置剧本（`BUILTIN_SCRIPTS`）→ 剧本规整（`normalizeScript`）→ 年龄与纪年工具 → 存档与状态（`makeCharacter` / `newSave` / `migrateSave` / `normalizeState`）→ 上下文拼装（`buildSystemPrompt` / `buildUserPrompt` / `fmtCharacter`）→ API（`apiBody` / `chatStream` / `chatOnce`）→ 解析与合并（`splitOutput` / `applyDelta`）→ 游戏循环（`playTurn` / `evolveAfterSkip` / 摘要 / 开场 / 选项）→ 界面 → 版本更新 → 启动。
 - `BUILTIN_SCRIPTS` 里 `@generated-scripts:start` 和 `@generated-scripts:end` 之间的内容由脚本写入，不要手改。
-- `scripts/*.json`：内置剧本。`tools/build_douluo.py`、`tools/build_originals.py` 生成它们，`tools/inject_scripts.py` 写进 `index.html`（顺序见脚本里的 `ORDER`）。
-- `tests/smoke.mjs`：冒烟测试（见下）。
+- `scripts/*.json`：内置剧本。`tools/build_douluo.py`、`tools/build_qindi.py`、`tools/build_originals.py` 生成它们，`tools/inject_scripts.py` 写进 `index.html`（顺序见脚本里的 `ORDER`）。
+- `tools/SCRIPT_TEXT_GUIDE.md`：剧本文字的写法（设定资料体）。写或改任何会发给 AI 的文字前先读。
+- `tests/smoke.mjs`：冒烟测试（见下）。`tests/features.mjs`：潜质、现状、隐藏设定、文风、迁移、划线收藏、全文、开局时间、固定开场的测试。
 - 测试钩子：`window.__wenyou`（`G`、`S()`、`buildSystemPrompt`、`buildUserPrompt`、`applyDelta`、`ageNum`、`splitStageYear` 等）。
 
 ## 剧本 JSON 的关键字段
 
-`id`、`version`、`title`、`intro`（给玩家看）、`world`（每回合完整发给 AI）、`rules`、`style`、`defaultProfile`、`relationLabels`、`stats`（主角属性；`age` 用数字，由出生年份算；`gender` 可以 `fixed`）、`charStats`（人物基础栏）、`calendar`（`format` 里 `{n}` 是年份，`start` 是开始年份）、`growth`（跳年推演用的成长规则）、`characters`（`gender`、`age`、`stats`、`address`、`met`，隐藏设定 `motive` / `backstory` / `secret`）、`creation`（开局随机表：`fields[].options[]` 可以带 `stats`、`characters`、`overrides`、`stage`、`opening`、`objectives`；`ai: true` 时每项有 ✨，`aiGuide` / `aiHint` 告诉 AI 怎么现编）、`milestones`（隐藏主线节点）、`openingSeeds`、`openingGuide`、`opening`（固定开场白，留空由 AI 写）。
+`id`、`version`、`title`、`intro`（给玩家看，也发给生成主角的 AI）、`world`（每回合完整发给 AI）、`rules`、`style`、`defaultProfile`、`relationLabels`、`stats`（主角属性；`age` 用数字，由出生年份算；`gender` 可以 `fixed`）、`charStats`（人物基础栏）、`calendar`（`format` 里 `{n}` 是年份，`start` 是开始年份）、`growth`（跳年推演用的成长规则）、`characters`（`gender`、`age`、`stats`、`address`、`met`，隐藏设定 `motive` / `backstory` / `secret`）、`creation`（开局随机表：`fields[].options[]` 可以带 `stats`、`characters`、`overrides`、`stage`、`opening`、`objectives`；`ai: true` 时每项有 ✨，`aiGuide` / `aiHint` 告诉 AI 怎么现编）、`milestones`（隐藏主线节点）、`openingSeeds`、`openingRandom`、`openingGuide`、`opening`（固定开场白，留空由 AI 写；内置剧本都留空）、`traitSeeds`（剧本自己的随机潜质）。人物还有 `now`（现状）。开局选项还可以带 `byAge`、`yearsLater`、`season`、`milestones`；开局表的某一项写 `ai: false` 就不给 ✨。
 
 ## 发布流程
 
 1. 改 `index.html` 或 `tools/` 里的生成脚本。改了剧本就运行 `python3 tools/build_douluo.py` / `python3 tools/build_originals.py`，再运行 `python3 tools/inject_scripts.py`。内置剧本改了内容要把 `version` 加一，旧存档才会提示同步。
 2. 把 `index.html` 里的 `BUILD` 改成新的号（格式 `YYYY-MM-DD.N`，例如 `2026-09-29.5`）。
 3. 语法检查：`node -e "const s=require('fs').readFileSync('index.html','utf8');new Function(s.match(/<script>([\s\S]*)<\/script>/)[1])"`。
-4. 跑 `node tests/smoke.mjs`（用 Playwright 打开页面，拦截 `https://api.deepseek.com/**` 返回模拟回复，不需要真的密钥）。改了哪块，就再针对那块写一段模拟测试，看状态、看发给 AI 的内容、截图看界面。
+4. 跑 `node tests/smoke.mjs` 和 `node tests/features.mjs`（用 Playwright 打开页面，拦截 `https://api.deepseek.com/**` 返回模拟回复，不需要真的密钥）。改了哪块，就再针对那块写一段模拟测试，看状态、看发给 AI 的内容、截图看界面。
 5. 提交。提交说明末尾按当前会话给的署名要求加上署名行（以往是 `Co-Authored-By: …` 和 `Claude-Session: <会话链接>` 两行）。
 6. `git push origin main`，然后告诉用户新版本号和改了什么。
 
@@ -105,13 +107,17 @@
   - 人物基础信息栏（`charStats`）、纪年（`calendar`）、跳年推演（`growth`）；斗罗 v3 填上原著人物的基础数据。
   - 三个新剧本：合欢宗 · 问情、海城千金、大胤仙朝 · 权谋。
   - 这份工作文档和冒烟测试。
+  - 用户发现 DeepSeek 写出来有 Claude 味。根源是剧本、人物卡、生成提示里全是我的口吻和写法要求。全部改成设定资料体，文风交给 DeepSeek（见原则 3）。版本 `2026-09-29.5`。
+  - 同一版：人物现状、本局随机潜质、隐藏设定不在编辑框显示、划线收藏（摘录）、全文页、开局时间、天赋按年龄；斗罗 v4 按原著全文核对；新剧本《琴帝》；三个原创剧本 v2；雾港来信去掉固定开场。
 
 ## 用户那边的现状
 
-- 用户在玩斗罗剧本的一个旧存档（主角云缨，边境农家出身，武魂殿学院，银辉长枪）。这个存档是旧版开的，第 3 回合是在性别丢失时写的，已经建议她重新生成，并点“同步到这个存档”升级到新版剧本。
-- 斗罗原著人物的数据是我凭记忆填的，可能和原著有出入。用户指出哪里不对，就改 `tools/build_douluo.py` 里的 `BASIC`，版本号加一。
+- 用户玩斗罗剧本。旧存档打开后会提示“同步到这个存档”（斗罗 v4）；同步后人物资料换新，但最近几回合的原文还是旧口吻，要过几回合才淡掉，新开一局最干净。
+- 斗罗原著数据已经按连载版全文核对。原文没写、估算的数值（比比东和千仞雪的等级、叶泠泠等后期处境、季节）在 `ERAS` 末尾注释里；用户指出不对就改，版本号加一。
+- 《琴帝》第 1 版刚上线，原著细节里拿不准的（部分年龄、等级、外貌）是推断的，等用户反馈。
 
 ## 可以接着做的（用户还没要求，别主动加，除非她提到）
 
 - 用户说“时间线演化系统”时，指的是纪年和年龄推演；原创剧本目前没有主线节点。
+- 《琴帝》还没有“开局时间”（只有开篇一个时间点，开篇时紫已离开）。用户想从更早（叶音竹和紫一路同行）或更晚（新生大赛、兽人入侵）开始时，照斗罗的 `ERAS` 做。
 - 如果用户想要新剧本，按上面三个原创剧本的结构写：常设人物男女都有、贴合世界的基础栏、纪年和成长规则、开局随机表、开场情境。

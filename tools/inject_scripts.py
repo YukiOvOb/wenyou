@@ -9,7 +9,7 @@ import json
 import os
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ORDER = ["douluo-wuhundian", "hehuan-wenqing", "dushi-qianjin", "xianchao-quanmou"]
+ORDER = ["douluo-wuhundian", "qindi-milan", "hehuan-wenqing", "dushi-qianjin", "xianchao-quanmou"]
 
 START = "/* @generated-scripts:start（tools/inject_scripts.py 从 scripts/*.json 写入，不要手改这一段） */\n"
 END = "/* @generated-scripts:end */\n"

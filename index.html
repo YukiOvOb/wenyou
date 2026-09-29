@@ -203,7 +203,7 @@ details.fold summary{cursor:pointer;color:var(--muted);font-size:13.5px}
 .trait-list li{border:1px dashed var(--accent);border-radius:10px;padding:8px 11px;font-size:14px;background:var(--surface)}
 .trait-list li b{color:var(--accent);font-weight:600}
 .trait-list li small{color:var(--faint);margin-left:6px}
-.chip.c-rv{border-style:dashed;border-color:var(--accent);color:var(--accent)} /* 划线收藏 */ mark.hl{background:transparent;background:color-mix(in srgb,var(--accent) 13%,transparent);color:inherit;text-decoration:underline 2px var(--accent);text-underline-offset:4px;text-decoration-skip-ink:none;border-radius:2px;cursor:pointer} .mark-btn{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:55;background:var(--accent);color:var(--accent-ink);border:0;border-radius:99px;padding:10px 20px;font-size:15px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.22);-webkit-user-select:none;user-select:none;touch-action:manipulation} .mark-btn[hidden]{display:none} .mark-text{font:15.5px/1.85 var(--serif);white-space:pre-wrap} .mark-filter{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px} .chip-btn{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:99px;padding:3px 11px;font-size:12.5px;min-height:28px} .chip-btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)} .faint{color:var(--faint)} .entry.flash{animation:flash 1.6s ease-out} @keyframes flash{0%{background:color-mix(in srgb,var(--accent) 16%,transparent)}100%{background:transparent}}
+.chip.c-rv{border-style:dashed;border-color:var(--accent);color:var(--accent)} /* 划线收藏 */ mark.hl{background:transparent;background:color-mix(in srgb,var(--accent) 13%,transparent);color:inherit;text-decoration:underline 2px var(--accent);text-underline-offset:4px;text-decoration-skip-ink:none;border-radius:2px;cursor:pointer} .mark-btn{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:55;background:var(--accent);color:var(--accent-ink);border:0;border-radius:99px;padding:10px 20px;font-size:15px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.22);-webkit-user-select:none;user-select:none;touch-action:manipulation} .mark-btn[hidden]{display:none} .mark-text{font:15.5px/1.85 var(--serif);white-space:pre-wrap} .mark-filter{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px} .chip-btn{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:99px;padding:3px 11px;font-size:12.5px;min-height:28px} .chip-btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)} .faint{color:var(--faint)} .full-turn{border-bottom:1px solid var(--line);padding:12px 0} .full-text p{font:15.5px/1.85 var(--serif);margin:.4em 0} mark.q{background:var(--accent-soft);color:inherit;border-radius:2px;padding:0 1px} .entry.flash{animation:flash 1.6s ease-out} @keyframes flash{0%{background:color-mix(in srgb,var(--accent) 16%,transparent)}100%{background:transparent}}
 .turn-mark .rw{border:0;background:transparent;color:var(--accent);font-size:12px;padding:2px 4px;cursor:pointer;flex:0 0 auto}
 .turn-mark .rw:disabled{color:var(--faint)}
 .roll{display:flex;flex-direction:column;gap:10px}
@@ -5465,9 +5465,10 @@ async function renderShelf() {
 function stripScript(sc) { const o = clone(sc); delete o.builtin; delete o.updatedAt; return o; }
 async function saveMenu(sv) {
   const v = await openModal({ title: sv.name, body: h('dl', { class: 'kv' }, h('dt', {}, '剧本'), h('dd', {}, sv.script.title), h('dt', {}, '回合'), h('dd', {}, String(sv.state.turn)), h('dt', {}, '创建'), h('dd', {}, fmtTime(sv.createdAt)), h('dt', {}, '用量'), h('dd', {}, `${sv.usage.calls} 次调用 · ${Math.round((sv.usage.prompt + sv.usage.completion) / 1000)}k tokens`)),
-    actions: [{ label: '删除', value: 'del', danger: true }, { label: '复制', value: 'dup' }, { label: '导出', value: 'exp' }, { label: '改名', value: 'ren' }, { label: '继续', value: 'open', primary: true }] });
+    actions: [{ label: '删除', value: 'del', danger: true }, { label: '复制', value: 'dup' }, { label: '导出', value: 'exp' }, { label: '导出全文', value: 'txt' }, { label: '改名', value: 'ren' }, { label: '继续', value: 'open', primary: true }] });
   if (v === 'open') openSave(sv.id);
   if (v === 'exp') download(`存档-${sv.name}.json`, JSON.stringify(sv));
+  if (v === 'txt') download(`${sv.name}-全文.txt`, fullText(sv), 'text/plain');
   if (v === 'dup') { const c = clone(sv); c.id = 'save-' + uid(); c.name = sv.name + '（副本）'; await persist(c); renderShelf(); toast('已复制存档'); }
   if (v === 'ren') { const r = await formModal('存档改名', [{ key: 'name', label: '名称' }], { name: sv.name }); if (r && str(r.name)) { sv.name = str(r.name); await DB.put('saves', sv); renderShelf(); } }
   if (v === 'del' && await ask('删除存档', `删除「${sv.name}」？删除后无法恢复。`, '删除', true)) { await DB.del('saves', sv.id); renderShelf(); }
@@ -6161,8 +6162,56 @@ async function openAllMarks() {
   if ($('#v-shelf') && !$('#v-shelf').hidden) renderShelf();
 }
 
+/* ---------------- 全文：把整局剧情当小说读、搜索、导出。只给玩家看，不发给 AI ---------------- */
+function fullText(sv) {
+  const head = `《${sv.script.title}》${sv.name}\n主角：${playerName(sv)}\n导出时间：${new Date().toLocaleString()}\n`;
+  return head + sv.log.map(e => `\n——— ${e.turn === 0 ? '开场' : `第 ${e.turn} 回合`} ———\n${e.action ? `【你的行动】${e.action}\n\n` : ''}${str(e.narrative)}`).join('\n') + '\n';
+}
+function hlQuery(text, q) {
+  if (!q) return esc(text);
+  let out = '', i = 0;
+  for (let j = text.indexOf(q); j >= 0; j = text.indexOf(q, i)) { out += esc(text.slice(i, j)) + `<mark class="q">${esc(q)}</mark>`; i = j + q.length; }
+  return out + esc(text.slice(i));
+}
+let fullQuery = '';
+function sheetFull(b) {
+  const sv = G.save;
+  const inp = h('input', { type: 'search', placeholder: '搜索人名、地点、事件……', value: fullQuery, style: 'flex:1;min-width:0' });
+  const list = h('div', { class: 'full-list' });
+  const info = h('div', { class: 'small muted', style: 'margin:8px 0 12px' });
+  const draw = () => {
+    const q = str(inp.value); fullQuery = q; list.innerHTML = '';
+    const hits = sv.log.filter(e => !q || str(e.narrative).includes(q) || str(e.action).includes(q));
+    info.textContent = q ? `找到 ${hits.length} 个回合` : `共 ${sv.log.length} 个回合。这里的内容只给你看，不会发给 AI。`;
+    for (const e of hits) {
+      const paras = str(e.narrative).split(/\n+/).map(t => t.trim()).filter(Boolean);
+      const shown = q ? paras.filter(t => t.includes(q)) : paras;
+      list.append(h('div', { class: 'full-turn' },
+        h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;flex-wrap:nowrap' },
+          h('b', { class: 'small' }, e.turn === 0 ? '开场' : `第 ${e.turn} 回合`),
+          h('div', { class: 'row', style: 'flex-wrap:nowrap' },
+            h('button', { class: 'btn sm ghost', onclick: () => quoteToAction(e, shown.join('\n')) }, '引用'),
+            h('button', { class: 'btn sm ghost', onclick: () => jumpToEntry(e) }, '看原文'))),
+        e.action ? h('div', { class: 'small muted', style: 'margin:4px 0' }, '你的行动：', h('span', { html: hlQuery(e.action, q) })) : null,
+        h('div', { class: 'full-text', html: shown.map(t => `<p>${hlQuery(t, q)}</p>`).join('') || '<p class="muted">（这一回合的行动里提到了）</p>' })));
+    }
+  };
+  let t = 0; inp.addEventListener('input', () => { clearTimeout(t); t = setTimeout(draw, 200); });
+  b.append(h('div', { class: 'row', style: 'flex-wrap:nowrap;gap:8px' }, inp,
+    h('button', { class: 'btn sm', onclick: () => download(`${sv.name}-全文.txt`, fullText(sv), 'text/plain') }, '导出')), info, list);
+  draw();
+}
+/* 把找到的前情放进行动框，玩家改一改再发，提醒 AI 以前发生过什么 */
+function quoteToAction(e, text) {
+  const t = str(text).slice(0, 400);
+  const a = $('#action');
+  a.value = `（前情提醒：${e.turn === 0 ? '开场' : `第 ${e.turn} 回合`}里写过——“${t}”）\n` + a.value;
+  closeSheet(); autoGrow(); a.focus();
+  toast('已放进输入框，改好后发送');
+}
+
 /* ---------------- 状态面板 ---------------- */
-const SHEET_TABS = [['status', '状态'], ['chars', '人物'], ['events', '事件'], ['goals', '目标'], ['marks', '摘录'], ['play', '玩法'], ['memory', '记忆'], ['save', '存档']];
+const SHEET_TABS = [['status', '状态'], ['chars', '人物'], ['events', '事件'], ['goals', '目标'], ['marks', '摘录'], ['full', '全文'], ['play', '玩法'], ['memory', '记忆'], ['save', '存档']];
 let sheetTab = 'status';
 function openSheet(tab) { if (tab) sheetTab = tab; $('#scrim').hidden = false; $('#sheet').hidden = false; renderSheet(); }
 function closeSheet() { $('#scrim').hidden = true; $('#sheet').hidden = true; renderLog(); renderGameHeader(); renderPaceBar(); }
@@ -6171,7 +6220,7 @@ function renderSheet() {
   const tabs = $('#sheet-tabs'); tabs.innerHTML = '';
   for (const [k, l] of SHEET_TABS) tabs.append(h('button', { class: 'tab', role: 'tab', 'aria-selected': String(k === sheetTab), onclick: () => { sheetTab = k; renderSheet(); } }, l));
   const b = $('#sheet-body'); b.innerHTML = ''; b.scrollTop = 0;
-  ({ status: sheetStatus, chars: sheetChars, events: sheetEvents, goals: sheetGoals, marks: sheetMarks, play: sheetPlay, memory: sheetMemory, save: sheetSave })[sheetTab](b);
+  ({ status: sheetStatus, chars: sheetChars, events: sheetEvents, goals: sheetGoals, marks: sheetMarks, full: sheetFull, play: sheetPlay, memory: sheetMemory, save: sheetSave })[sheetTab](b);
 }
 async function commit(msg) { await persist(G.save); renderSheet(); renderGameHeader(); if (msg) toast(msg); }
 function guardBusy() { if (G.busy) { toast('生成中，稍后再改'); return true; } return false; }

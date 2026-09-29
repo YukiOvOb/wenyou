@@ -163,6 +163,20 @@ await page.click('#modal-body .mark-card >> text=删除'); await page.click('#mo
 check(await W(() => window.__wenyou.marks().length === 0), '可以删除');
 await page.click('#modal-foot >> text=关闭');
 
+console.log('【全文】');
+await page.click('.save-item:has-text("第")'); await page.waitForTimeout(300);
+await page.click('#btn-panel'); await page.click('#sheet-tabs >> text=全文'); await page.waitForTimeout(150);
+check((await page.$$('#sheet-body .full-turn')).length >= 1, '全文页按回合列出剧情');
+await page.fill('#sheet-body input[type=search]', '雾很大'); await page.waitForTimeout(350);
+check((await page.$$('#sheet-body mark.q')).length === 1, '搜索能找到并高亮');
+await page.fill('#sheet-body input[type=search]', '没有这个词'); await page.waitForTimeout(350);
+check((await page.$$('#sheet-body .full-turn')).length === 0, '搜不到时没有结果');
+await page.fill('#sheet-body input[type=search]', '雾很大'); await page.waitForTimeout(350);
+await page.click('#sheet-body .full-turn >> text=引用'); await page.waitForTimeout(200);
+check((await page.inputValue('#action')).includes('前情提醒：开场'), '引用会放进行动输入框');
+await page.fill('#action', '');
+await page.click('#btn-leave'); await page.waitForTimeout(200);
+
 console.log('【固定开场的剧本】');
 await startGame('雾港');
 check(!lastUser.includes('这次开场的情境'), '雾港来信的开场不再随机抽情境');
